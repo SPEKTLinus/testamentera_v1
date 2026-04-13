@@ -4,6 +4,7 @@ import { useState } from "react";
 
 interface Props {
   elapsedMinutes: number;
+  onBackToDocuments?: () => void;
 }
 
 const CHECKLIST = [
@@ -42,7 +43,7 @@ const CHECKLIST = [
   },
 ];
 
-export function Step4Signing({ elapsedMinutes }: Props) {
+export function Step4Signing({ elapsedMinutes, onBackToDocuments }: Props) {
   const [checked, setChecked] = useState<Set<string>>(new Set());
 
   const toggle = (id: string) => {
@@ -127,8 +128,13 @@ export function Step4Signing({ elapsedMinutes }: Props) {
         </p>
       </div>
 
-      <div className="mt-8">
-        <a href="/" className="btn-secondary text-sm">
+      <div className="mt-8 flex flex-wrap gap-3">
+        {onBackToDocuments && (
+          <button type="button" onClick={onBackToDocuments} className="btn-primary text-sm">
+            Tillbaka till dokumenten
+          </button>
+        )}
+        <a href="/" className="btn-secondary text-sm inline-flex items-center justify-center">
           Tillbaka till startsidan
         </a>
       </div>

@@ -123,6 +123,14 @@ export function ConversationFlow() {
     setSubTotal(1);
   }, [saveDraft]);
 
+  const handleBackToDocumentsFromSigning = useCallback(() => {
+    saveDraft({ step: 4 });
+    setCurrentStep(4);
+    setSubPhase("documents");
+    setSubStep(0);
+    setSubTotal(1);
+  }, [saveDraft]);
+
   const handleWillGenerated = useCallback(
     (generatedWill: GeneratedWill, aiTokenUsage?: WillAiTokenUsage) => {
       saveDraft({
@@ -261,7 +269,12 @@ export function ConversationFlow() {
                   onWillGenerated={handleWillGenerated}
                 />
               )}
-              {subPhase === "signing" && <Step4Signing elapsedMinutes={elapsedMinutes} />}
+              {subPhase === "signing" && (
+                <Step4Signing
+                  elapsedMinutes={elapsedMinutes}
+                  onBackToDocuments={handleBackToDocumentsFromSigning}
+                />
+              )}
             </div>
           )}
         </div>
