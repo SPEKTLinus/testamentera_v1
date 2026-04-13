@@ -8,7 +8,8 @@ export function Footer() {
           <div>
             <p className="font-heading text-lg font-semibold mb-3">Sista Viljan</p>
             <p className="text-sm text-[#6b7280] leading-relaxed max-w-xs">
-              Vi hjälper svenska familjer att ta hand om varandra — med ett juridiskt giltigt testamente på femton minuter.
+              Vi hjälper dig sätta ord på vad du vill — så dina nära slipper gissa och bråka när du inte längre kan förklara
+              själv.
             </p>
           </div>
           <div>

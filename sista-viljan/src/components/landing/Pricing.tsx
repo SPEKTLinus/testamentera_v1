@@ -2,9 +2,9 @@ import Link from "next/link";
 import { PAYMENT_PRICES, REMINDER_RECURRING_INTERVAL_MONTHS } from "@/lib/pricing";
 
 const included = [
-  "Juridiskt giltigt testamente enligt Ärvdabalken",
+  "Juridiskt giltigt testamente enligt Ärvdabalken — dina önskemål på pränt, inte rykt eller tolkning",
   "Anpassat för din exakta familjesituation",
-  "Konsekvensanalys i realtid under processen",
+  "Konsekvenser av varje val i realtid — innan de kvarvarande ska leva med dem",
   "Signeringsguide steg för steg",
   `E-postuppdateringar löpande — påminnelse var ${REMINDER_RECURRING_INTERVAL_MONTHS}:e månad att se över och uppdatera ditt testamente`,
 ];
@@ -20,9 +20,11 @@ export function Pricing() {
               Ett pris.<br />Inga överraskningar.
             </h2>
             <p className="text-[#4a5568] text-sm leading-relaxed mb-8">
-              En jurist kostar 3 000–8 000 kr för samma tjänst. Vi tar {PAYMENT_PRICES.will} kr — en gång. Inga
-              prenumerationer. Du får löpande e-post med påminnelse ungefär var {REMINDER_RECURRING_INTERVAL_MONTHS}:e
-              månad om att se över testamentet när livet förändras.
+              Det du köper är lugn för de du lämnar kvar: tydliga besked som minskar risken för tvist och
+              &ldquo;men hon menade väl&hellip;&rdquo; En jurist kostar ofta 3 000–8 000 kr för motsvarande. Vi tar{" "}
+              {PAYMENT_PRICES.will}{" "}
+              kr — en gång, inga prenumerationer. Du får dessutom löpande e-post ungefär var{" "}
+              {REMINDER_RECURRING_INTERVAL_MONTHS}:e månad om att se över testamentet när livet förändras.
             </p>
 
             <div className="mb-10">

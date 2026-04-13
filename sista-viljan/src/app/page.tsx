@@ -23,17 +23,17 @@ export default function LandingPage() {
         <section className="py-24 px-6 bg-[#0e0e0e]">
           <div className="max-w-3xl mx-auto text-center">
             <p className="text-xs font-medium uppercase tracking-widest text-[#6b7280] mb-6">
-              Du kan göra det idag
+              Ge dem svaren nu
             </p>
             <h2 className="font-heading text-3xl md:text-5xl font-semibold text-white leading-tight mb-6">
               Det tar femton minuter.<br />
               <span className="italic font-normal text-[#9ca3af]">
-                Det håller i generationer.
+                Det minskar år av tvivel.
               </span>
             </h2>
             <p className="text-[#9ca3af] mb-10 max-w-lg mx-auto text-sm leading-relaxed">
-              Du betalar ingenting förrän du är redo att ladda ner ditt testamente.
-              Börja nu, fortsätt när du vill.
+              Du betalar ingenting förrän du är redo att ladda ner ditt testamente. Ju tidigare det står klart, desto
+              mindre risk att någon ska behöva undra vad du egentligen ville.
             </p>
             <Link
               href="/app"

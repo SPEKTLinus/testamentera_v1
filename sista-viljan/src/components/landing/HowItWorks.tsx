@@ -5,19 +5,19 @@ const steps = [
     number: "01",
     title: "Berätta om din situation",
     description:
-      "Vi ställer enkla frågor om din familj, dina tillgångar och dina önskemål. Svaren anpassar testamentet helt efter dig. Det tar ungefär fem minuter.",
+      "Vi ställer enkla frågor om din familj, dina tillgångar och dina önskemål. Svaren anpassar testamentet efter dig och gör din bild tydlig för dem som stannar kvar. Det tar ungefär fem minuter.",
   },
   {
     number: "02",
     title: "Bestäm vem som får vad",
     description:
-      "Du väljer vem som ärver, om arvet ska skyddas vid skilsmässa, och om det finns specifika saker som ska gå till en särskild person. Vi förklarar konsekvenserna löpande.",
+      "Du väljer vem som ärver, om arvet ska skyddas vid skilsmässa, och om något särskilt ska till en viss person. Tydliga besked minskar risken att någon känner sig överkörd eller utanför. Vi förklarar konsekvenserna löpande.",
   },
   {
     number: "03",
     title: "Ladda ner och skriv under",
     description:
-      "Du får ett juridiskt giltigt testamente — klart att skriva ut. Vi guidar dig genom signeringen med vittnen, steg för steg. Klart på fem minuter.",
+      "Du får ett juridiskt giltigt testamente — klart att skriva ut. Vi guidar dig genom signeringen med vittnen. När det är gjort finns ditt besked på pränt, så ingen behöver gissa vad du menade.",
   },
 ];
 
@@ -32,7 +32,8 @@ export function HowItWorks() {
               Tre steg.<br />Femton minuter.
             </h2>
             <p className="text-[#4a5568] text-sm leading-relaxed mb-8">
-              Vi har gjort det komplexa enkelt — utan att kompromissa med det juridiska.
+              Du gör dina önskemål skriftliga och juridiskt giltiga — så de du lämnar efter dig slipper tvista om vad du
+              ville.
             </p>
             <Link href="/app" className="btn-primary text-sm">
               Kom igång nu

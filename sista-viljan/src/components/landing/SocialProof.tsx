@@ -1,19 +1,19 @@
 const testimonials = [
   {
     quote:
-      "Jag hade skjutit upp det i tre år. Gjorde det på lunchen. Tog 20 minuter och jag kände mig oerhört lättad efteråt.",
+      "Jag hade skjutit upp det i tre år. På lunchen blev det gjort. Skönt att veta att barnen inte ska behöva undra eller bråka om vad jag menade.",
     author: "Karin S.",
     detail: "Sambo, två barn",
   },
   {
     quote:
-      "Vi var gifta men hade särkullbarn från mina tidigare relationer. Det hade kunnat bli väldigt komplicerat. Nu är allt klart.",
+      "Vi hade särkullbarn och kunde se hur det kunnat bli känsligt mellan syskon. Nu står det svart på vitt — ingen ska behöva tolka oss sinsemellan.",
     author: "Anders M.",
     detail: "Gift, tre barn varav ett särkullbarn",
   },
   {
     quote:
-      "Jag visste inte ens att min sambo inte hade arvsrätt. Det var en chock. Nu har vi ordnat det.",
+      "Jag visste inte att min sambo inte hade arvsrätt. Nu är det tydligt för oss båda — ingen ska stå där och känna sig lurad efteråt.",
     author: "Sofia L.",
     detail: "Sambo sedan åtta år",
   },
@@ -27,7 +27,7 @@ export function SocialProof() {
           <div>
             <p className="label-overline mb-4">Från våra användare</p>
             <h2 className="font-heading text-3xl md:text-4xl font-semibold text-ink">
-              De som redan gjort det.
+              Mindre tvivel. Mer trygghet.
             </h2>
           </div>
           <div className="mt-6 md:mt-0 text-sm text-[#6b7280]">
