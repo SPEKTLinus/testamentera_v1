@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "sista-viljan (Next.js)",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "sista-viljan", "run", "dev"],
+      "port": 3000,
+      "autoPort": true
+    }
+  ]
+}
