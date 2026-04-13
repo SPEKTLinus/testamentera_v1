@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import type { WillDraft, GeneratedWill, WillAiTokenUsage } from "@/lib/types";
 import { buildWillSections } from "@/lib/willTemplate";
 
@@ -13,9 +13,9 @@ interface Props {
 }
 
 export function Step3Documents({ draft, onComplete, onEdit, onWillGenerated }: Props) {
-  const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
+  const [uploadedWillFileName, setUploadedWillFileName] = useState<string | null>(null);
+  const [uploadedLetterFileName, setUploadedLetterFileName] = useState<string | null>(null);
   const [letterExpanded, setLetterExpanded] = useState(false);
-  const printRef = useRef<HTMLDivElement>(null);
   const [generationState, setGenerationState] = useState<"idle" | "loading" | "error">(
     draft.generatedWill ? "idle" : "loading"
   );
@@ -55,14 +55,17 @@ export function Step3Documents({ draft, onComplete, onEdit, onWillGenerated }: P
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleWillUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) setUploadedFileName(file.name);
+    if (file) setUploadedWillFileName(file.name);
   };
 
-  const handlePrint = () => {
-    window.print();
+  const handleLetterUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) setUploadedLetterFileName(file.name);
   };
+
+  const showPersonalLetter = draft.wantsPersonalLetter === true;
 
   return (
     <div>
@@ -73,7 +76,7 @@ export function Step3Documents({ draft, onComplete, onEdit, onWillGenerated }: P
           Klart att ladda ner.
         </h1>
         <p className="text-[#4a5568] text-base leading-relaxed max-w-lg">
-          Nedan ser du ditt fullständiga testamente. Ladda ner som PDF, skriv ut och underteckna med vittnen.
+          Nedan ser du dina dokument. Ladda ner testamente som PDF och underteckna med vittnen enligt instruktionerna.
         </p>
       </div>
 
@@ -93,28 +96,25 @@ export function Step3Documents({ draft, onComplete, onEdit, onWillGenerated }: P
         </div>
       </div>
 
+      <p className="text-xs font-medium uppercase tracking-widest text-[#4a5568] mb-4">
+        Dokument 1 — Testamente
+      </p>
+
       {/* Will preview — rendered as document in the browser */}
       <div className="mb-6">
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center justify-between mb-3 gap-4">
           <p className="text-xs font-medium uppercase tracking-widest text-[#1a2e4a]">
             Förhandsgranskning
           </p>
-          <div className="flex items-center gap-4">
-            {generationState === "idle" && (
-              <button
-                onClick={generateWill}
-                className="text-xs text-[#6b7280] underline underline-offset-2 hover:text-[#1a2e4a] hover:no-underline"
-              >
-                Regenerera
-              </button>
-            )}
+          {generationState === "idle" && (
             <button
-              onClick={onEdit}
-              className="text-xs text-[#1a2e4a] underline underline-offset-2 hover:no-underline"
+              type="button"
+              onClick={generateWill}
+              className="text-xs text-[#6b7280] underline underline-offset-2 hover:text-[#1a2e4a] hover:no-underline shrink-0"
             >
-              Justera innehåll
+              Regenerera
             </button>
-          </div>
+          )}
         </div>
 
         {generationState === "loading" && (
@@ -145,25 +145,17 @@ export function Step3Documents({ draft, onComplete, onEdit, onWillGenerated }: P
         )}
 
         {generationState === "idle" && (
-          <div
-            ref={printRef}
-            className="border border-[#e5e5e5] bg-white shadow-sm print:shadow-none print:border-0"
-          >
+          <div className="border border-[#e5e5e5] bg-white shadow-sm">
             <WillHtmlPreview draft={draft} />
           </div>
         )}
       </div>
 
       {/* Action buttons */}
-      <div className="flex flex-wrap gap-3 mb-10">
+      <div className="flex flex-wrap items-center gap-3 mb-10">
         <LegalPDFButton draft={draft} />
         <button
-          onClick={handlePrint}
-          className="btn-secondary text-sm py-2.5 px-5"
-        >
-          Skriv ut
-        </button>
-        <button
+          type="button"
           onClick={onEdit}
           className="text-sm py-2.5 px-5 border border-[#e5e5e5] text-[#4a5568] hover:border-[#9ca3af] transition-colors"
           style={{ borderRadius: "3px" }}
@@ -172,22 +164,23 @@ export function Step3Documents({ draft, onComplete, onEdit, onWillGenerated }: P
         </button>
       </div>
 
-      {/* Upload signed copy */}
-      <div className="border border-[#e5e5e5] p-5 mb-8">
+      {/* Upload signed will — dokument 1 */}
+      <div className="border border-[#e5e5e5] p-5 mb-10">
         <p className="font-heading text-base font-semibold mb-1">
-          Ladda upp undertecknat testamente
+          Dokument 1 — Ladda upp undertecknat testamente
         </p>
         <p className="text-sm text-[#4a5568] mb-4 leading-relaxed">
-          När du har skrivit ut och undertecknat testamentet med vittnen kan du ladda upp en
-          inskannad kopia här som referens (valfritt).
+          När du har undertecknat testamentet med vittnen kan du ladda upp en inskannad kopia här som
+          referens (valfritt).
         </p>
 
-        {uploadedFileName ? (
+        {uploadedWillFileName ? (
           <div className="flex items-center gap-3 p-3 bg-[#f9f9f9] border border-[#e5e5e5]">
             <span className="text-green-600 text-sm">✓</span>
-            <span className="text-sm text-ink flex-1 truncate">{uploadedFileName}</span>
+            <span className="text-sm text-ink flex-1 truncate">{uploadedWillFileName}</span>
             <button
-              onClick={() => setUploadedFileName(null)}
+              type="button"
+              onClick={() => setUploadedWillFileName(null)}
               className="text-xs text-[#6b7280] hover:text-ink"
             >
               Ta bort
@@ -204,7 +197,7 @@ export function Step3Documents({ draft, onComplete, onEdit, onWillGenerated }: P
             <input
               type="file"
               accept=".pdf,.jpg,.jpeg,.png"
-              onChange={handleUpload}
+              onChange={handleWillUpload}
               className="sr-only"
             />
           </label>
@@ -215,44 +208,102 @@ export function Step3Documents({ draft, onComplete, onEdit, onWillGenerated }: P
         </p>
       </div>
 
-      {/* Personal letter — collapsible */}
-      <div className="border border-[#e5e5e5] mb-10">
-        <button
-          onClick={() => setLetterExpanded(!letterExpanded)}
-          className="w-full p-5 flex items-start justify-between gap-4 text-left hover:bg-[#f9f9f9] transition-colors"
-        >
-          <div>
-            <div className="flex items-center gap-3 mb-1">
-              <span className="text-xs font-medium uppercase tracking-widest text-[#4a5568]">
-                Dokument 2
-              </span>
-              <span className="text-xs text-[#6b7280] border border-[#e5e5e5] px-2 py-0.5">
-                Personligt
-              </span>
-            </div>
-            <p className="font-heading text-lg font-semibold">Brev till mina nära</p>
-            <p className="text-sm text-[#6b7280] mt-1">
-              Dina begravningsönskemål och personliga ord. Inte juridiskt — men kanske viktigast.
-            </p>
-          </div>
-          <svg
-            width="16" height="16" viewBox="0 0 16 16" fill="none"
-            className={`flex-shrink-0 mt-1 transition-transform ${letterExpanded ? "rotate-180" : ""}`}
+      {/* Dokument 2 — personligt brev (val i samtalet) */}
+      {showPersonalLetter ? (
+        <div className="border border-[#e5e5e5] mb-10">
+          <p className="text-xs font-medium uppercase tracking-widest text-[#4a5568] px-5 pt-5 mb-1">
+            Dokument 2 — Personligt brev
+          </p>
+          <p className="text-sm text-[#4a5568] px-5 mb-4 leading-relaxed">
+            I samtalet valde du att ta med ett brev till dina nära. Det är inte juridiskt bindande — till för dem du
+            lämnar efter dig.
+          </p>
+          <button
+            type="button"
+            onClick={() => setLetterExpanded(!letterExpanded)}
+            className="w-full p-5 pt-0 flex items-start justify-between gap-4 text-left hover:bg-[#f9f9f9] transition-colors"
           >
-            <path d="M3 6L8 11L13 6" stroke="#0e0e0e" strokeWidth="1.5" strokeLinecap="round" />
-          </svg>
-        </button>
+            <div>
+              <div className="flex items-center gap-3 mb-1">
+                <span className="text-xs text-[#6b7280] border border-[#e5e5e5] px-2 py-0.5">
+                  Förhandsgranskning
+                </span>
+              </div>
+              <p className="font-heading text-lg font-semibold">Brev till mina nära</p>
+              <p className="text-sm text-[#6b7280] mt-1">
+                Begravningsönskemål och personliga ord från samtalet.
+              </p>
+            </div>
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 16 16"
+              fill="none"
+              className={`flex-shrink-0 mt-1 transition-transform ${letterExpanded ? "rotate-180" : ""}`}
+            >
+              <path d="M3 6L8 11L13 6" stroke="#0e0e0e" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+          </button>
 
-        {letterExpanded && (
-          <div className="border-t border-[#e5e5e5] p-5">
-            <PersonalLetterPreview draft={draft} />
+          {letterExpanded && (
+            <div className="border-t border-[#e5e5e5] p-5">
+              <PersonalLetterPreview draft={draft} />
+            </div>
+          )}
+
+          <div className="border-t border-[#e5e5e5] p-4 bg-[#f9f9f9] space-y-4">
+            <PersonalPDFButton draft={draft} />
+            <div className="pt-2 border-t border-[#e5e5e5]">
+              <p className="font-heading text-sm font-semibold mb-1 text-ink">
+                Dokument 2 — Ladda upp kopia av brevet
+              </p>
+              <p className="text-xs text-[#4a5568] mb-3 leading-relaxed">
+                Valfritt: spara en inskannad kopia av det utskrivna brevet som referens på din enhet.
+              </p>
+              {uploadedLetterFileName ? (
+                <div className="flex items-center gap-3 p-3 bg-white border border-[#e5e5e5]">
+                  <span className="text-green-600 text-sm">✓</span>
+                  <span className="text-sm text-ink flex-1 truncate">{uploadedLetterFileName}</span>
+                  <button
+                    type="button"
+                    onClick={() => setUploadedLetterFileName(null)}
+                    className="text-xs text-[#6b7280] hover:text-ink"
+                  >
+                    Ta bort
+                  </button>
+                </div>
+              ) : (
+                <label className="flex items-center gap-3 cursor-pointer group">
+                  <div className="border border-dashed border-[#9ca3af] group-hover:border-[#1a2e4a] transition-colors p-4 flex-1 text-center">
+                    <p className="text-sm text-[#4a5568]">
+                      Klicka för att välja fil <span className="text-[#9ca3af]">(PDF, JPG, PNG)</span>
+                    </p>
+                  </div>
+                  <input
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    onChange={handleLetterUpload}
+                    className="sr-only"
+                  />
+                </label>
+              )}
+              <p className="text-xs text-[#9ca3af] mt-2">
+                Filen lagras lokalt på din enhet och laddas inte upp till någon server.
+              </p>
+            </div>
           </div>
-        )}
-
-        <div className="border-t border-[#e5e5e5] p-4 bg-[#f9f9f9]">
-          <PersonalPDFButton draft={draft} />
         </div>
-      </div>
+      ) : (
+        <div className="border border-[#e5e5e5] p-5 mb-10 bg-[#fafafa]">
+          <p className="text-xs font-medium uppercase tracking-widest text-[#4a5568] mb-2">
+            Dokument 2 — Personligt brev
+          </p>
+          <p className="text-sm text-[#4a5568] leading-relaxed">
+            I samtalet valde du att <strong>inte</strong> ta med ett separat brev till dina nära. Vill du ändra det kan du
+            gå tillbaka via ”Justera testamente” och prata med Will igen.
+          </p>
+        </div>
+      )}
 
       {/* Disclaimer footer */}
       <p className="text-xs text-[#9ca3af] leading-relaxed border-t border-[#e5e5e5] pt-5 mb-8">

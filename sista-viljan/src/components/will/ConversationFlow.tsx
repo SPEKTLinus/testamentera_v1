@@ -11,7 +11,9 @@ import { SwishPayment } from "./SwishPayment";
 import { StartWillGate, readSessionPhone } from "./StartWillGate";
 import { PAYMENT_PRICES, REMINDER_INCLUDED_MONTHS } from "@/lib/pricing";
 import { WillChatPanel } from "./WillChatPanel";
-import { getIntakeProgressPercent, getIntakeStage } from "@/lib/willChatIntake";
+import { getIntakeProgressPercent, getIntakeStage, migrateWillDraft } from "@/lib/willChatIntake";
+
+const MAIN_OFFSET = "3.5rem"; /* h-14 header */
 
 const TOTAL_STEPS = 5;
 
@@ -41,10 +43,14 @@ export function ConversationFlow() {
   const [overlay, setOverlay] = useState<OverlayState>("none");
   const [gateMode, setGateMode] = useState<GateMode>("loading");
 
-  useEffect(() => {
+   useEffect(() => {
     const saved = loadLocalDraft();
     if (saved) {
-      setDraft(saved);
+      const migrated = migrateWillDraft(saved);
+      if (migrated !== saved) {
+        saveLocalDraft(migrated);
+      }
+      setDraft(migrated);
       const step = saved.step || 1;
       setCurrentStep(step);
       if (step >= 4) {
@@ -185,19 +191,30 @@ export function ConversationFlow() {
         </div>
       </header>
 
-      <div className="pt-14 min-h-screen">
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-0 lg:gap-16 min-h-[calc(100vh-56px)]">
-            <div className="py-12 lg:py-16 lg:border-r border-[#e5e5e5] lg:pr-16">
-              {subPhase === "chat" && (
-                               <WillChatPanel
+      <div className="min-h-screen pt-14">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6">
+          {subPhase === "chat" ? (
+            <div
+              className="grid grid-cols-1 items-stretch gap-0 lg:grid-cols-[minmax(0,1fr)_minmax(280px,360px)] lg:gap-10"
+              style={{ minHeight: `calc(100vh - ${MAIN_OFFSET})` }}
+            >
+              <div
+                className="flex min-h-[calc(100vh-3.5rem)] flex-col border-[#e5e5e5] py-4 lg:min-h-0 lg:h-[calc(100vh-3.5rem)] lg:border-r lg:pr-8"
+              >
+                <WillChatPanel
                   draft={draft}
                   onDraftMerged={handleChatDraftMerged}
                   onContinueFromIntake={handleContinueFromIntake}
-                  intakeStage={intakeStage}
-                  intakePercent={intakePercent}
                 />
-              )}
+              </div>
+              <aside className="hidden min-h-0 flex-col overflow-hidden py-4 lg:flex lg:h-[calc(100vh-3.5rem)]">
+                <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1">
+                  <ConsequencePreview circumstances={draft.circumstances} />
+                </div>
+              </aside>
+            </div>
+          ) : (
+            <div className="mx-auto max-w-4xl px-0 py-10 sm:py-12">
               {subPhase === "documents" && (
                 <Step3Documents
                   draft={draft}
@@ -209,15 +226,7 @@ export function ConversationFlow() {
               )}
               {subPhase === "signing" && <Step4Signing elapsedMinutes={elapsedMinutes} />}
             </div>
-
-            {subPhase === "chat" && (
-              <div className="hidden lg:block py-16">
-                <div className="sticky top-20">
-                  <ConsequencePreview circumstances={draft.circumstances} />
-                </div>
-              </div>
-            )}
-          </div>
+          )}
         </div>
       </div>
 

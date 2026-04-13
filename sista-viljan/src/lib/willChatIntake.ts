@@ -2,6 +2,15 @@ import type { Circumstances, WillDraft } from "./types";
 
 const PN_REGEX = /^\d{8}-\d{4}$/;
 
+/** Äldre utkast saknade wantsPersonalLetter — behåll brev som standard för redan betalda/steg 4+. */
+export function migrateWillDraft(draft: WillDraft): WillDraft {
+  if (draft.wantsPersonalLetter !== undefined) return draft;
+  if (draft.paid || (draft.step ?? 0) >= 4) {
+    return { ...draft, wantsPersonalLetter: true };
+  }
+  return draft;
+}
+
 export function needsPartnerStayQuestion(draft: WillDraft): boolean {
   const c = draft.circumstances;
   return (
@@ -30,6 +39,7 @@ const INTAKE_CHECKS: Array<(d: WillDraft) => boolean> = [
   (d) => !!d.wishes.executor?.trim(),
   (d) => !!d.funeralWishes.burialForm,
   (d) => !!d.funeralWishes.ceremony,
+  (d) => typeof d.wantsPersonalLetter === "boolean",
 ];
 
 export function getIntakeProgressPercent(draft: WillDraft): number {
@@ -160,6 +170,10 @@ export function mergeWillChatExtraction(
     if (typeof o.partnerCanStay === "boolean") {
       next.wishes.partnerCanStay = o.partnerCanStay;
     }
+  }
+
+  if (typeof raw.wantsPersonalLetter === "boolean") {
+    next.wantsPersonalLetter = raw.wantsPersonalLetter;
   }
 
   const f = raw.funeralWishes;

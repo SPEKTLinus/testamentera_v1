@@ -84,6 +84,8 @@ export interface WillDraft {
   testatorPersonalNumber?: string;
   testatorAddress?: string;
   partnerName?: string;
+  /** Om användaren vill ha dokument 2 (personligt brev) — sätts i chatten */
+  wantsPersonalLetter?: boolean;
   completedAt?: string;
   paid?: boolean;
   createdAt?: string;

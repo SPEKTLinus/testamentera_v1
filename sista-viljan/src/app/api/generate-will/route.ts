@@ -22,11 +22,16 @@ function getAnthropic(): Anthropic {
   return new Anthropic({ apiKey: key });
 }
 
-const SYSTEM_PROMPT = `Du är en erfaren svensk jurist som specialiserar sig på familjerätt och arvsrätt. Din uppgift är att skriva formella testamentstexter på svenska baserat på information som användaren lämnat.
+const SYSTEM_PROMPT = `Du är en erfaren svensk jurist som specialiserar sig på familjerätt och arvsrätt. Din uppgift är att skriva formella testamentstexter på svenska baserat enbart på de fakta som anges i underlaget nedan.
 
-Skriv i ett formellt men läsbart juridiskt språk — inte stelt legalespråk, men korrekt och tydligt. Varje sektion ska vara ett sammanhållet stycke text som är juridiskt precist och täcker den relevanta informationen.
+Skriv i ett formellt men läsbart juridiskt språk — inte stelt legalespråk, men korrekt och tydligt. Varje sektion ska vara ett sammanhållet stycke som återger just dessa fakta.
 
-Du ska ENBART inkludera sektioner för information som faktiskt har angetts. Hitta inte på information som saknas.
+STRIKTA REGLER
+- Lägg inte till dispositioner, fullmakter, befogenheter, rätt att ta ut medel ur dödsboet, förvaltningsvillkor eller andra påståenden som inte uttryckligen framgår av underlaget.
+- Om testamentsexekutor endast anges med namn (eller motsvarande): utse personen som testamentsexekutor utan att beskriva utökade befogenheter, arvode, uttag ur boet eller liknande om sådant inte anges.
+- Gissa inte. Om något är oklart i underlaget, utelämna det hellre än att fylla i med standardjuridik.
+
+Du ska ENBART inkludera sektioner för information som faktiskt har angetts i underlaget.
 
 Returnera ALLTID ett rent JSON-objekt utan markdown-formatering, kodblock eller förklarande text — bara JSON.`;
 
@@ -85,7 +90,9 @@ Returnera ENBART ett JSON-objekt i detta format (utan markdown):
   ]
 }
 
-Inkludera bara sektioner för information som faktiskt angetts. Sektioner numreras automatiskt i renderingen. Använd alltid dessa titlar när relevant: "Fördelning av kvarlåtenskap", "Enskild egendom", "Nyttjanderätt till gemensam bostad", "Särkullbarn", "Legat", "Förvaltning av arv och testamentsexekutor", "Ersättningsregler", "Övriga villkor". Den sista sektionen ska alltid vara "Övriga villkor" med text om att detta testamente ersätter alla tidigare testamenten.`);
+Inkludera bara sektioner för information som faktiskt angetts. Sektioner numreras automatiskt i renderingen. Använd dessa titlar när relevant: "Fördelning av kvarlåtenskap", "Enskild egendom", "Nyttjanderätt till gemensam bostad", "Särkullbarn", "Legat", "Förvaltning av arv och testamentsexekutor", "Ersättningsregler", "Övriga villkor".
+
+Valfri avslutande sektion "Övriga villkor": endast om du redan har minst en innehållssektion ovan. I så fall får den enbart innehålla en kort mening om att detta testamente ersätter tidigare testamenten — inga andra påståenden i samma sektion. Om inget annat innehåll finns ska du inte hitta på en sådan sektion.`);
 
   return lines.join("\n");
 }

@@ -8,9 +8,9 @@ interface Props {
 
 const CHECKLIST = [
   {
-    id: "print",
-    text: "Skriv ut ditt testamente",
-    detail: "Bara det juridiska dokumentet — inte det personliga brevet",
+    id: "paper",
+    text: "Ha testamentet på papper för underskrift",
+    detail: "Ladda ner PDF från föregående steg och skriv ut om du behöver ett fysiskt exemplar.",
   },
   {
     id: "witnesses_found",
