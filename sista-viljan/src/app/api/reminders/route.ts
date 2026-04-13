@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
 import { supabase } from "@/lib/supabase";
-import { REMINDER_INCLUDED_MONTHS } from "@/lib/pricing";
+import { REMINDER_RECURRING_INTERVAL_MONTHS } from "@/lib/pricing";
+
+/** Nästa kalenderdatum (YYYY-MM-DD) ungefär `months` månader från idag. */
+function nextReminderDateFromNow(months: number): string {
+  const d = new Date();
+  d.setMonth(d.getMonth() + months);
+  return d.toISOString().split("T")[0];
+}
 
 function getResend() {
   const key = process.env.RESEND_API_KEY;
@@ -11,7 +18,7 @@ function getResend() {
 
 const FROM_EMAIL = "Sista Viljan <hej@sistaviljan.se>";
 
-/** En påminnelse per användare när next_reminder_date passeras (sätts t.ex. vid köp + 12 månader). */
+/** Skickar påminnelse när next_reminder_date passeras; efter utskick schemalägs nästa +REMINDER_RECURRING_INTERVAL_MONTHS. */
 export async function POST(req: NextRequest) {
   const auth = req.headers.get("authorization");
   if (auth !== `Bearer ${process.env.REMINDER_SECRET}`) {
@@ -47,12 +54,12 @@ export async function POST(req: NextRequest) {
         text: email.text,
       });
 
-      // En påminnelse ingår i köpet; efter utskick stängs schemaläggning (sätt nytt datum vid nytt köp).
+      const nextDate = nextReminderDateFromNow(REMINDER_RECURRING_INTERVAL_MONTHS);
       await supabase
         .from("profiles")
         .update({
           last_reminder_sent: new Date().toISOString(),
-          next_reminder_date: null,
+          next_reminder_date: nextDate,
         })
         .eq("id", user.id);
 
@@ -74,16 +81,17 @@ interface UserRow {
 function buildReminderEmail(user: UserRow): { subject: string; text: string } {
   const name = user.name || "Hej";
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://sistaviljan.se";
+  const every = REMINDER_RECURRING_INTERVAL_MONTHS;
 
   return {
-    subject: "Påminnelse om ditt testamente",
+    subject: "Dags att se över ditt testamente?",
     text: `Hej ${name},
 
-Det här är en påminnelse från Sista Viljan — en tjänst som ingår i ditt köp under de första ${REMINDER_INCLUDED_MONTHS} månaderna.
+Det här är en återkommande påminnelse från Sista Viljan — den ingår i ditt köp. Vi skickar den ungefär var ${every}:e månad som en enkel påminnelse om att se över testamentet när livet förändras (barn, bostad, relation med mera).
 
-Mycket kan hända på kort tid: ny familj, bostad eller relation. Det kan vara värt att läsa igenom ditt testamente och fundera på om något bör justeras. Ett nytt testamente som följer formkraven ersätter det tidigare.
+Du behöver inte svara på det här mejlet. Nästa liknande påminnelse kommer om ungefär ${every} månader om inget annat ändras.
 
-Om ingenting har förändrats behöver du inte göra något — ditt nuvarande testamente gäller.
+Om något har förändrats kan det vara läge att uppdatera testamentet. Ett nytt testamente som följer formkraven ersätter det tidigare. Om ingenting har förändrats behöver du inte göra något — ditt nuvarande testamente gäller.
 
 Öppna Sista Viljan: ${appUrl}/app
 

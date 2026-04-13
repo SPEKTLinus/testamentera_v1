@@ -9,7 +9,7 @@ import { Step3Documents } from "./steps/Step3Documents";
 import { Step4Signing } from "./steps/Step4Signing";
 import { SwishPayment } from "./SwishPayment";
 import { StartWillGate, readSessionPhone } from "./StartWillGate";
-import { PAYMENT_PRICES, REMINDER_INCLUDED_MONTHS } from "@/lib/pricing";
+import { PAYMENT_PRICES, REMINDER_RECURRING_INTERVAL_MONTHS } from "@/lib/pricing";
 import { WillChatPanel } from "./WillChatPanel";
 import { LetterChatPanel } from "./LetterChatPanel";
 import { getIntakeProgressPercent, getIntakeStage, migrateWillDraft } from "@/lib/willChatIntake";
@@ -156,12 +156,22 @@ export function ConversationFlow() {
   }, []);
 
   const handleOpenLetterFlow = useCallback(() => {
+    if (draft.personalLetterChatLocked) return;
     if (draft.paidLetter) {
       setSubPhase("letter_chat");
     } else {
       setOverlay("letter_paywall");
     }
-  }, [draft.paidLetter]);
+  }, [draft.paidLetter, draft.personalLetterChatLocked]);
+
+  const handleLockPersonalLetter = useCallback(() => {
+    saveDraft({
+      personalLetterChatLocked: true,
+      personalLetterChatLockedAt: new Date().toISOString(),
+    });
+    setSubPhase("documents");
+    setOverlay("none");
+  }, [saveDraft]);
 
   const handleLetterPaymentPaid = useCallback(() => {
     saveDraft({ paidLetter: true });
@@ -194,6 +204,12 @@ export function ConversationFlow() {
           : "Klart";
 
   const elapsedMinutes = Math.round((Date.now() - startTime) / 60000);
+
+  useEffect(() => {
+    if (subPhase === "letter_chat" && draft.personalLetterChatLocked) {
+      setSubPhase("documents");
+    }
+  }, [subPhase, draft.personalLetterChatLocked]);
 
   if (gateMode === "loading") {
     return (
@@ -251,7 +267,11 @@ export function ConversationFlow() {
               style={{ minHeight: `calc(100vh - ${MAIN_OFFSET})` }}
             >
               <div className="flex min-h-[calc(100vh-4rem)] flex-col lg:min-h-[calc(100vh-3.5rem)]">
-                <LetterChatPanel draft={draft} onDraftMerged={handleLetterChatMerged} />
+                <LetterChatPanel
+                  draft={draft}
+                  onDraftMerged={handleLetterChatMerged}
+                  onFinishLetterChat={handleLockPersonalLetter}
+                />
               </div>
             </div>
           ) : (
@@ -262,6 +282,7 @@ export function ConversationFlow() {
                   onComplete={handleDocumentsComplete}
                   onBackToWillChat={handleBackToWillChat}
                   onOpenLetterFlow={handleOpenLetterFlow}
+                  onLockPersonalLetter={handleLockPersonalLetter}
                   onWillGenerated={handleWillGenerated}
                 />
               )}
@@ -287,8 +308,9 @@ export function ConversationFlow() {
             </h2>
             <p className="text-sm text-[#4a5568] leading-relaxed mb-6">
               Betala {PAYMENT_PRICES.will} kr för att ladda ner ditt juridiska testamente.
-              Engångsbetalning — inga prenumerationer. E-postpåminnelser ingår i {REMINDER_INCLUDED_MONTHS}{" "}
-              månader efter köpet. Ett separat personligt brev kan du köpa till på dokument-sidan.
+              Engångsbetalning — inga prenumerationer. Du får löpande e-post med påminnelse ungefär var{" "}
+              {REMINDER_RECURRING_INTERVAL_MONTHS}:e månad att se över testamentet. Ett separat personligt brev kan du
+              köpa till på dokument-sidan.
             </p>
             <ul className="space-y-2 mb-6">
               {[

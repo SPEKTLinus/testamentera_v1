@@ -18,7 +18,10 @@ export function letterChatTurnsRemaining(draft: WillDraft): number {
   return Math.max(0, LETTER_CHAT_MAX_AI_TURNS - used);
 }
 
-/** Ingår i köpet: påminnelser under denna period (marknadsföring / copy) */
-export const REMINDER_INCLUDED_MONTHS = 12;
+/**
+ * Månader mellan e-postpåminnelser om att se över / uppdatera testamentet.
+ * Efter varje utskick schemaläggs nästa datum (löpande, ingår i köpet).
+ */
+export const REMINDER_RECURRING_INTERVAL_MONTHS = 12;
 
 export type PaymentProductKey = keyof typeof PAYMENT_PRICES;

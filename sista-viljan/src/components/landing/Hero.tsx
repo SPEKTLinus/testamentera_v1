@@ -4,7 +4,7 @@ export function Hero() {
   return (
     <section className="pt-40 pb-24 px-6">
       <div className="max-w-4xl mx-auto">
-        <p className="label-overline mb-6">Testamente online</p>
+        <p className="label-overline mb-6">Ditt testamente</p>
 
         <h1 className="font-heading text-5xl md:text-6xl lg:text-7xl font-semibold text-ink leading-[1.08] tracking-tight mb-8">
           Din familj förtjänar<br />
@@ -13,8 +13,9 @@ export function Hero() {
         </h1>
 
         <p className="text-lg text-[#4a5568] max-w-xl leading-relaxed mb-12">
-          Varje år tvingas tusentals svenska familjer igenom ett arv som ingen ville ha.
-          Inte för att de inte brydde sig — utan för att de aldrig hann skriva ner det.
+          Många skjuter på testamentet — inte för att det inte spelar roll, utan för att det sällan blev prioriterat i
+          vardagen. Nu när du redan är här: om du tar beslutet idag går det att få gjort, tydligt och utan krångel.
+          Vi påminner dig sedan löpande om att se över testamentet när livet förändras.
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4 items-start mb-20">

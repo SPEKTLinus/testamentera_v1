@@ -96,6 +96,9 @@ export interface WillDraft {
   paidLetter?: boolean;
   /** Räknas upp av server vid varje lyckat letter-chat-svar; tak LETTER_CHAT_MAX_AI_TURNS */
   letterChatAssistantRounds?: number;
+  /** När true: brev-samtal stängt (ingen mer AI); PDF och utkast finns kvar */
+  personalLetterChatLocked?: boolean;
+  personalLetterChatLockedAt?: string;
   personalLetter?: PersonalLetter;
   completedAt?: string;
   paid?: boolean;

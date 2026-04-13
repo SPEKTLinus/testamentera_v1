@@ -116,6 +116,16 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (draft.personalLetterChatLocked) {
+      return NextResponse.json(
+        {
+          error: "Brev-samtalet är avslutat. Du kan inte skicka fler meddelanden.",
+          code: "LETTER_CHAT_LOCKED",
+        },
+        { status: 403 }
+      );
+    }
+
     const letterRounds = draft.letterChatAssistantRounds ?? 0;
     if (letterRounds >= LETTER_CHAT_MAX_AI_TURNS) {
       return NextResponse.json(

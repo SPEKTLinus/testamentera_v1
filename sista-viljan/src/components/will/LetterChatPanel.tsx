@@ -16,6 +16,8 @@ interface ChatMessage {
 interface Props {
   draft: WillDraft;
   onDraftMerged: (merged: WillDraft) => void;
+  /** Avsluta brev-samtal (samma som dokument-sidan) */
+  onFinishLetterChat?: () => void;
 }
 
 function mergeLetterIntoDraft(
@@ -44,7 +46,7 @@ function mergeLetterIntoDraft(
   return next;
 }
 
-export function LetterChatPanel({ draft, onDraftMerged }: Props) {
+export function LetterChatPanel({ draft, onDraftMerged, onFinishLetterChat }: Props) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -111,6 +113,10 @@ export function LetterChatPanel({ draft, onDraftMerged }: Props) {
     letterBootstrapStarted.current = true;
     let cancelled = false;
     (async () => {
+      if (draftRef.current.personalLetterChatLocked) {
+        setError("Brev-samtalet är avslutat.");
+        return;
+      }
       if (letterChatTurnsRemaining(draftRef.current) <= 0) {
         setError(
           "Du har använt alla svar som ingår i brev-köpet. Kontakta oss om du behöver fortsätta."
@@ -131,10 +137,12 @@ export function LetterChatPanel({ draft, onDraftMerged }: Props) {
   }, [messages, isLoading]);
 
   const letterRemaining = letterChatTurnsRemaining(draft);
+  const letterLocked = !!draft.personalLetterChatLocked;
   const atLetterLimit = letterRemaining <= 0;
+  const letterHasBody = !!(draft.personalLetter?.body?.trim() ?? "");
 
   const handleSend = async () => {
-    if (!input.trim() || isLoading || atLetterLimit) return;
+    if (!input.trim() || isLoading || atLetterLimit || letterLocked) return;
     const text = input.trim();
     setInput("");
     const userMsg: ChatMessage = { role: "user", content: text };
@@ -165,7 +173,9 @@ export function LetterChatPanel({ draft, onDraftMerged }: Props) {
           Det här är inte juridik. Will lyssnar och gör bara lätta språkjusteringar — din röst och dina ord ska synas.
         </p>
         <p className="mt-2 text-xs text-[#6b7280]">
-          {atLetterLimit ? (
+          {letterLocked ? (
+            <span className="text-amber-800">Brev-samtalet är avslutat.</span>
+          ) : atLetterLimit ? (
             <span className="text-amber-800">
               Du har använt alla {LETTER_CHAT_MAX_AI_TURNS} svar som ingår i brev-köpet. Kontakta oss om du behöver mer.
             </span>
@@ -176,6 +186,27 @@ export function LetterChatPanel({ draft, onDraftMerged }: Props) {
             </>
           )}
         </p>
+        {letterHasBody && onFinishLetterChat && !letterLocked && (
+          <div className="mt-3">
+            <button
+              type="button"
+              onClick={() => {
+                if (
+                  typeof window !== "undefined" &&
+                  !window.confirm(
+                    "Avsluta brev-samtal? Du kan inte längre skicka meddelanden till Will. Texten och PDF sparas på dokument-sidan."
+                  )
+                ) {
+                  return;
+                }
+                onFinishLetterChat();
+              }}
+              className="text-sm text-[#4a5568] underline underline-offset-2 hover:text-ink"
+            >
+              Jag är färdig — lås brevet och gå till dokumenten
+            </button>
+          </div>
+        )}
       </div>
 
       <div
@@ -244,8 +275,14 @@ export function LetterChatPanel({ draft, onDraftMerged }: Props) {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-                           placeholder={atLetterLimit ? "Gräns nådd — kontakta oss vid behov." : "Skriv här…"}
-              disabled={isLoading || atLetterLimit}
+                           placeholder={
+                letterLocked
+                  ? "Brev-samtalet är avslutat."
+                  : atLetterLimit
+                    ? "Gräns nådd — kontakta oss vid behov."
+                    : "Skriv här…"
+              }
+              disabled={isLoading || atLetterLimit || letterLocked}
               rows={2}
               className="min-h-[42px] flex-1 resize-none border border-[#e5e5e5] px-3 py-2.5 text-sm text-ink transition-colors focus:border-[#1a2e4a] focus:outline-none disabled:opacity-50"
               style={{ borderRadius: "3px" }}
@@ -259,7 +296,7 @@ export function LetterChatPanel({ draft, onDraftMerged }: Props) {
             <button
               type="button"
               onClick={handleSend}
-              disabled={!input.trim() || isLoading || atLetterLimit}
+              disabled={!input.trim() || isLoading || atLetterLimit || letterLocked}
               className="btn-primary h-[42px] shrink-0 px-4 py-0 text-sm disabled:cursor-not-allowed disabled:opacity-40"
             >
               Skicka

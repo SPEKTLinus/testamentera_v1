@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { loadLocalDraft } from "@/lib/supabase";
 import type { ContactPerson, WillDraft } from "@/lib/types";
-import { REMINDER_INCLUDED_MONTHS } from "@/lib/pricing";
+import { REMINDER_RECURRING_INTERVAL_MONTHS } from "@/lib/pricing";
 
 export function AccountPage() {
   const [draft, setDraft] = useState<WillDraft | null>(null);
@@ -90,8 +90,9 @@ export function AccountPage() {
               </div>
               <div>
                 <p className="text-sm text-[#4a5568] leading-relaxed max-w-md">
-                  När du köper ditt testamente ingår e-postpåminnelser under {REMINDER_INCLUDED_MONTHS} månader — så du
-                  får en vänlig nudge att se över om livet har förändrats.
+                  När du köper ditt testamente ingår återkommande e-post: ungefär var{" "}
+                  {REMINDER_RECURRING_INTERVAL_MONTHS}:e månad får du en påminnelse om att se över testamentet när livet
+                  förändras.
                 </p>
               </div>
             </div>

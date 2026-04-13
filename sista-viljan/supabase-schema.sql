@@ -46,7 +46,7 @@ create table if not exists public.profiles (
   storage_expires_at timestamptz,
   storage_reminder_sent_90 boolean not null default false,
   -- Reminders
-  next_reminder_date date,           -- set to purchase_date + 12 months on first will creation
+  next_reminder_date date,           -- first: purchase + 12m; after each reminder email: +12m (recurring)
   last_reminder_sent timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()

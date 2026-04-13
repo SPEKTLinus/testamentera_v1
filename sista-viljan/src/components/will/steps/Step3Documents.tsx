@@ -12,6 +12,8 @@ interface Props {
   onBackToWillChat: () => void;
   /** Köp brev eller öppna brev-chatt om redan betalt */
   onOpenLetterFlow: () => void;
+  /** Avsluta brev-samtal permanent (ingen mer AI) */
+  onLockPersonalLetter: () => void;
   onWillGenerated?: (generatedWill: GeneratedWill, aiTokenUsage?: WillAiTokenUsage) => void;
 }
 
@@ -40,6 +42,7 @@ export function Step3Documents({
   onComplete,
   onBackToWillChat,
   onOpenLetterFlow,
+  onLockPersonalLetter,
   onWillGenerated,
 }: Props) {
   const [letterExpanded, setLetterExpanded] = useState(false);
@@ -84,6 +87,7 @@ export function Step3Documents({
 
   const letterBody = draft.personalLetter?.body?.trim() ?? "";
   const hasPaidLetter = !!draft.paidLetter;
+  const letterChatLocked = !!draft.personalLetterChatLocked;
 
   return (
     <div>
@@ -193,14 +197,20 @@ export function Step3Documents({
             <p className="text-sm text-[#4a5568] leading-relaxed mb-4">
               Du har tillgång till brev-samtalet. Öppna det för att börja skriva tillsammans med Will.
             </p>
-            <button type="button" onClick={onOpenLetterFlow} className="btn-primary text-sm py-2.5 px-5">
+            <button
+              type="button"
+              onClick={onOpenLetterFlow}
+              disabled={letterChatLocked}
+              className="btn-primary text-sm py-2.5 px-5 disabled:cursor-not-allowed disabled:opacity-40"
+            >
               Öppna brev-samtal
             </button>
           </div>
-        ) : (
+        ) : letterChatLocked ? (
           <>
             <p className="text-sm text-[#4a5568] px-5 mb-4 leading-relaxed">
-              Här är ditt brev från brev-samtalet. Du kan ladda ner PDF eller fortsätta redigera i chatten.
+              Du har avslutat brev-samtalet. Texten finns kvar — ladda ner PDF vid behov. Du kan inte längre chatta med
+              Will om brevet.
             </p>
             <button
               type="button"
@@ -228,8 +238,60 @@ export function Step3Documents({
             )}
             <div className="border-t border-[#e5e5e5] p-4 bg-[#f9f9f9] flex flex-wrap gap-3">
               <PersonalPDFButton draft={draft} />
+            </div>
+          </>
+        ) : (
+          <>
+            <p className="text-sm text-[#4a5568] px-5 mb-4 leading-relaxed">
+              Här är ditt brev från brev-samtalet. Ladda ner PDF, fortsätt redigera i chatten, eller avsluta när du är
+              färdig — då stängs chattfunktionen.
+            </p>
+            <button
+              type="button"
+              onClick={() => setLetterExpanded(!letterExpanded)}
+              className="w-full p-5 pt-0 flex items-start justify-between gap-4 text-left hover:bg-[#f9f9f9] transition-colors"
+            >
+              <div>
+                <span className="text-xs text-[#6b7280] border border-[#e5e5e5] px-2 py-0.5">Förhandsgranskning</span>
+                <p className="font-heading text-lg font-semibold mt-2">Brev till mina nära</p>
+              </div>
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 16 16"
+                fill="none"
+                className={`flex-shrink-0 mt-1 transition-transform ${letterExpanded ? "rotate-180" : ""}`}
+              >
+                <path d="M3 6L8 11L13 6" stroke="#0e0e0e" strokeWidth="1.5" strokeLinecap="round" />
+              </svg>
+            </button>
+            {letterExpanded && (
+              <div className="border-t border-[#e5e5e5] p-5">
+                <PersonalLetterPreview draft={draft} />
+              </div>
+            )}
+            <div className="border-t border-[#e5e5e5] p-4 bg-[#f9f9f9] flex flex-wrap gap-3 items-center">
+              <PersonalPDFButton draft={draft} />
               <button type="button" onClick={onOpenLetterFlow} className="btn-secondary text-sm py-2.5 px-5">
                 Fortsätt i brev-samtal
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (
+                    typeof window !== "undefined" &&
+                    !window.confirm(
+                      "Avsluta brev-samtal? Du kan inte längre skicka meddelanden till Will om brevet. PDF och text sparas."
+                    )
+                  ) {
+                    return;
+                  }
+                  onLockPersonalLetter();
+                }}
+                className="text-sm py-2.5 px-5 border border-[#e5e5e5] text-[#4a5568] hover:border-[#9ca3af] transition-colors"
+                style={{ borderRadius: "3px" }}
+              >
+                Jag är färdig — lås brevet
               </button>
             </div>
           </>

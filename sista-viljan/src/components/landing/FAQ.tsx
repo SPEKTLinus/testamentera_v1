@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { REMINDER_RECURRING_INTERVAL_MONTHS } from "@/lib/pricing";
 
 const faqs = [
   {
@@ -20,8 +21,7 @@ const faqs = [
   },
   {
     question: "Vad händer om jag vill ändra testamentet senare?",
-    answer:
-      "Livet förändras — och då kan testamentet behöva skrivas om. Ett nytt testamente som följer formkraven ersätter det gamla och ska undertecknas med två vittnen. Vi skickar påminnelser under de första 12 månaderna efter köpet så du får en chans att tänka till. Vid större ändringar kan det vara bra att rådgöra med jurist.",
+    answer: `Livet förändras — och då kan testamentet behöva skrivas om. Ett nytt testamente som följer formkraven ersätter det gamla och ska undertecknas med två vittnen. Som en del av köpet skickar vi löpande e-post med ungefär ${REMINDER_RECURRING_INTERVAL_MONTHS} månaders mellanrum, så du får en påminnelse om att se över om något har ändrats. Vid större ändringar kan det vara bra att rådgöra med jurist.`,
   },
   {
     question: "Vad är skillnaden mellan ett eget testamente och ett inbördes testamente?",

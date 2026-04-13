@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { WillDraft } from "@/lib/types";
-import { PAYMENT_PRICES } from "@/lib/pricing";
+import { PAYMENT_PRICES, REMINDER_RECURRING_INTERVAL_MONTHS } from "@/lib/pricing";
 
 interface Props {
   elapsedMinutes: number;
@@ -145,7 +145,8 @@ export function Step4Signing({ elapsedMinutes, draft, onOpenLetterFlow, onBackTo
       <div className="mt-10 pt-8 border-t border-[#e5e5e5]">
         <p className="text-xs text-[#6b7280] leading-relaxed max-w-lg">
           Om något större förändras — nytt barn, ny bostad, ny relation — kan det vara dags att skriva ett nytt
-          testamente som ersätter det gamla (med nya vittnen). Påminnelser under det första året ingår i ditt köp.
+          testamente som ersätter det gamla (med nya vittnen). Återkommande e-postpåminnelser (ungefär var{" "}
+          {REMINDER_RECURRING_INTERVAL_MONTHS}:e månad) om att se över testamentet ingår i ditt köp.
         </p>
       </div>
 
