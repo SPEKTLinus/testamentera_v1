@@ -11,7 +11,7 @@ import { SwishPayment } from "./SwishPayment";
 import { StartWillGate, readSessionPhone } from "./StartWillGate";
 import { PAYMENT_PRICES, REMINDER_INCLUDED_MONTHS } from "@/lib/pricing";
 import { WillChatPanel } from "./WillChatPanel";
-import { getIntakeProgressPercent, getIntakeStage, isIntakeComplete } from "@/lib/willChatIntake";
+import { getIntakeProgressPercent, getIntakeStage } from "@/lib/willChatIntake";
 
 const TOTAL_STEPS = 5;
 
@@ -75,13 +75,6 @@ export function ConversationFlow() {
     }
   }, []);
 
-  useEffect(() => {
-    if (gateMode !== "ok" || subPhase !== "chat" || draft.paid) return;
-    if (isIntakeComplete(draft)) {
-      setOverlay("paywall");
-    }
-  }, [gateMode, subPhase, draft]);
-
   const saveDraft = useCallback((updates: Partial<WillDraft>) => {
     setDraft((prev) => {
       const updated = { ...prev, ...updates };
@@ -95,7 +88,7 @@ export function ConversationFlow() {
     setDraft(merged);
   }, []);
 
-  const handleIntakeReadyForPayment = useCallback(() => {
+  const handleContinueFromIntake = useCallback(() => {
     setDraft((prev) => {
       if (prev.paid) {
         setSubPhase("documents");
@@ -197,10 +190,10 @@ export function ConversationFlow() {
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-0 lg:gap-16 min-h-[calc(100vh-56px)]">
             <div className="py-12 lg:py-16 lg:border-r border-[#e5e5e5] lg:pr-16">
               {subPhase === "chat" && (
-                <WillChatPanel
+                               <WillChatPanel
                   draft={draft}
                   onDraftMerged={handleChatDraftMerged}
-                  onIntakeComplete={handleIntakeReadyForPayment}
+                  onContinueFromIntake={handleContinueFromIntake}
                   intakeStage={intakeStage}
                   intakePercent={intakePercent}
                 />

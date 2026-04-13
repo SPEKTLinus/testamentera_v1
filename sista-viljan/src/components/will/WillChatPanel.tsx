@@ -16,7 +16,8 @@ interface ChatMessage {
 interface Props {
   draft: WillDraft;
   onDraftMerged: (merged: WillDraft) => void;
-  onIntakeComplete: () => void;
+  /** När allt är ifyllt och användaren väljer att gå vidare (betalning, eller dokument om redan betalat) */
+  onContinueFromIntake: () => void;
   /** 1–3 för sidhuvud */
   intakeStage: 1 | 2 | 3;
   intakePercent: number;
@@ -25,7 +26,7 @@ interface Props {
 export function WillChatPanel({
   draft,
   onDraftMerged,
-  onIntakeComplete,
+  onContinueFromIntake,
   intakeStage,
   intakePercent,
 }: Props) {
@@ -39,6 +40,8 @@ export function WillChatPanel({
   useEffect(() => {
     draftRef.current = draft;
   }, [draft]);
+
+  const intakeDone = isIntakeComplete(draft);
 
   const { isListening, isSupported, interimTranscript, toggleListening } = useVoiceInput({
     onTranscript: (text) => setInput((prev) => (prev ? `${prev} ${text}` : text)),
@@ -67,7 +70,7 @@ export function WillChatPanel({
         if (!res.ok) {
           setError(
             payload.error ||
-              `Kunde inte nå assistenten (HTTP ${res.status}). Kontrollera att ANTHROPIC_API_KEY finns i Vercel och deploya om.`
+              `Kunde inte nå Will (HTTP ${res.status}). Kontrollera att ANTHROPIC_API_KEY finns i Vercel och deploya om.`
           );
           return null;
         }
@@ -81,9 +84,6 @@ export function WillChatPanel({
             : mergedBase;
         draftRef.current = merged;
         onDraftMerged(merged);
-        if (isIntakeComplete(merged)) {
-          onIntakeComplete();
-        }
         return payload.text ?? null;
       } catch {
         setError("Nätverksfel. Kontrollera anslutningen och försök igen.");
@@ -92,7 +92,7 @@ export function WillChatPanel({
         setIsLoading(false);
       }
     },
-    [onDraftMerged, onIntakeComplete]
+    [onDraftMerged]
   );
 
   // Opening turn — avbruten effekt i Strict Mode ska inte fylla tråden
@@ -110,7 +110,7 @@ export function WillChatPanel({
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, isLoading]);
+  }, [messages, isLoading, intakeDone]);
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
@@ -145,7 +145,7 @@ export function WillChatPanel({
       <div className="mb-6">
         <p className="label-overline mb-2">Ditt samtal</p>
         <h1 className="font-heading text-2xl md:text-3xl font-semibold text-ink leading-tight mb-2">
-          Skriv ditt testamente tillsammans med assistenten
+          Skriv ditt testamente tillsammans med Will
         </h1>
         <p className="text-sm text-[#6b7280]">
           Steg {intakeStage} av 3 i samtalet — {stageLabel} ({intakePercent}% klart)
@@ -163,7 +163,8 @@ export function WillChatPanel({
           {isLoading && (
             <div className="flex items-center gap-2 text-[#6b7280] text-sm px-1">
               <span className="inline-flex gap-1">
-                <span                  className="w-1.5 h-1.5 bg-[#9ca3af] rounded-full animate-bounce"
+                <span
+                  className="w-1.5 h-1.5 bg-[#9ca3af] rounded-full animate-bounce"
                   style={{ animationDelay: "0ms" }}
                 />
                 <span
@@ -175,7 +176,7 @@ export function WillChatPanel({
                   style={{ animationDelay: "300ms" }}
                 />
               </span>
-              <span>Assistenten tänker…</span>
+              <span>Will tänker…</span>
             </div>
           )}
           {error && (
@@ -185,6 +186,24 @@ export function WillChatPanel({
             >
               {error}
             </p>
+          )}
+          {intakeDone && (
+            <div
+              className="border border-[#1a2e4a] bg-white px-4 py-4 shadow-sm animate-fade-in-up"
+              style={{ borderRadius: "3px" }}
+            >
+              <p className="text-sm font-medium text-ink mb-1">Klart att gå vidare</p>
+              <p className="text-sm text-[#4a5568] leading-relaxed mb-4">
+                Will har all information som behövs för att ta fram ditt testamente. Vill du justera något kan du skriva
+                ett svar till. När du är redo:{" "}
+                {draft.paid
+                  ? "gå vidare till dina dokument."
+                  : "nästa steg är betalning, sedan genereras dokumenten."}
+              </p>
+              <button type="button" onClick={onContinueFromIntake} className="btn-primary text-sm py-2.5 px-6">
+                Fortsätt
+              </button>
+            </div>
           )}
           <div ref={messagesEndRef} />
         </div>
@@ -220,7 +239,10 @@ export function WillChatPanel({
               onToggle={toggleListening}
               interimTranscript=""
             />
-            <span className="text-xs text-[#6b7280]">Du kan prata eller skriva — svara som det känns naturligt.</span>
+            <span className="text-xs text-[#6b7280]">
+              Du kan prata eller skriva — svara som det känns naturligt.
+              {intakeDone ? " När du är nöjd: klicka på Fortsätt." : ""}
+            </span>
           </div>
         </div>
       </div>
@@ -232,11 +254,14 @@ function ChatBubble({ role, content }: { role: Role; content: string }) {
   if (role === "assistant") {
     return (
       <div className="flex justify-start animate-fade-in-up">
-        <div
-          className="max-w-[95%] border border-[#e5e5e5] bg-white px-4 py-3 text-sm text-[#374151] leading-relaxed whitespace-pre-wrap shadow-sm"
-          style={{ borderRadius: "3px" }}
-        >
-          {content}
+        <div className="max-w-[95%]">
+          <p className="text-xs font-medium text-[#6b7280] mb-1.5 tracking-wide">Will</p>
+          <div
+            className="border border-[#e5e5e5] bg-white px-4 py-3 text-sm text-[#374151] leading-relaxed whitespace-pre-wrap shadow-sm"
+            style={{ borderRadius: "3px" }}
+          >
+            {content}
+          </div>
         </div>
       </div>
     );
