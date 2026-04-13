@@ -4,6 +4,7 @@ import { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react
 import type { WillDraft, WillAiTokenUsage } from "@/lib/types";
 import { LETTER_CHAT_MAX_AI_TURNS, letterChatTurnsRemaining } from "@/lib/pricing";
 import { useVoiceInput } from "@/hooks/useVoiceInput";
+import { renderAssistantMarkdown } from "@/lib/chatAssistantRichText";
 import { VoiceButton } from "./VoiceButton";
 
 type Role = "user" | "assistant";
@@ -229,7 +230,7 @@ export function LetterChatPanel({ draft, onDraftMerged, onFinishLetterChat }: Pr
                     className="border border-[#e5e5e5] bg-white px-4 py-3 text-sm leading-relaxed text-[#374151] shadow-sm whitespace-pre-wrap"
                     style={{ borderRadius: "3px" }}
                   >
-                    {msg.content}
+                    {renderAssistantMarkdown(msg.content)}
                   </div>
                 </div>
               ) : (

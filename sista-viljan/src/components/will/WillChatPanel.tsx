@@ -10,6 +10,7 @@ import {
   shouldShowIntakeContinueCta,
   getIntakeIncompleteSummaries,
 } from "@/lib/willChatIntake";
+import { renderAssistantMarkdown } from "@/lib/chatAssistantRichText";
 
 type Role = "user" | "assistant";
 
@@ -268,7 +269,7 @@ function ChatBubble({ role, content }: { role: Role; content: string }) {
             className="border border-[#e5e5e5] bg-white px-4 py-3 text-sm leading-relaxed text-[#374151] shadow-sm whitespace-pre-wrap"
             style={{ borderRadius: "3px" }}
           >
-            {content}
+            {renderAssistantMarkdown(content)}
           </div>
         </div>
       </div>
