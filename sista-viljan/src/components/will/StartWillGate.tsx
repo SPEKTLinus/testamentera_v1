@@ -6,6 +6,12 @@ import { formatPhoneDisplayFromE164 } from "@/lib/phone";
 
 const SESSION_PHONE_KEY = "sv_will_phone_normalized";
 const SESSION_DISPLAY_KEY = "sv_will_phone_display";
+export const SESSION_ACCESS_TOKEN_KEY = "sv_will_access_token";
+
+export function readSessionWillAccessToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return sessionStorage.getItem(SESSION_ACCESS_TOKEN_KEY);
+}
 
 function formatPhoneInput(raw: string): string {
   const digits = raw.replace(/\D/g, "");
@@ -15,7 +21,7 @@ function formatPhoneInput(raw: string): string {
 }
 
 type Props = {
-  onVerified: (e164: string) => void;
+  onVerified: (e164: string, accessToken?: string) => void;
 };
 
 export function StartWillGate({ onVerified }: Props) {
@@ -43,7 +49,13 @@ export function StartWillGate({ onVerified }: Props) {
       const display = formatPhoneDisplayFromE164(normalized);
       sessionStorage.setItem(SESSION_PHONE_KEY, normalized);
       sessionStorage.setItem(SESSION_DISPLAY_KEY, display);
-      onVerified(normalized);
+      const token = typeof data.accessToken === "string" ? data.accessToken : undefined;
+      if (token) {
+        sessionStorage.setItem(SESSION_ACCESS_TOKEN_KEY, token);
+      } else {
+        sessionStorage.removeItem(SESSION_ACCESS_TOKEN_KEY);
+      }
+      onVerified(normalized, token);
     } finally {
       setLoading(false);
     }
@@ -57,8 +69,8 @@ export function StartWillGate({ onVerified }: Props) {
           Bekräfta ditt mobilnummer
         </h1>
         <p className="text-sm text-[#4a5568] leading-relaxed mb-6">
-          Vi använder numret för att begränsa missbruk och förifylla Swish när du betalar. Du kan
-          ändra numret vid betalning om du vill.
+          Vi använder numret för att begränsa missbruk av samtalet (kostnader för AI), förifylla Swish
+          när du betalar och kunna skicka kvitto. Du kan ändra numret vid betalning om du vill.
         </p>
 
         <div className="space-y-4 mb-6">

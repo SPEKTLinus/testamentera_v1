@@ -43,9 +43,13 @@ export function WillChatPanel({ draft, onDraftMerged, onContinueFromIntake }: Pr
       setIsLoading(true);
       setError(null);
       try {
+        const token = draftRef.current.willAccessToken?.trim();
         const res = await fetch("/api/will-chat", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
           body: JSON.stringify({
             messages: uiMessages,
             draft: draftRef.current,

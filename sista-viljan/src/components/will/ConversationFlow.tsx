@@ -8,7 +8,8 @@ import { ConsequencePreview } from "./ConsequencePreview";
 import { Step3Documents } from "./steps/Step3Documents";
 import { Step4Signing } from "./steps/Step4Signing";
 import { SwishPayment } from "./SwishPayment";
-import { StartWillGate, readSessionPhone } from "./StartWillGate";
+import { StartWillGate, readSessionPhone, readSessionWillAccessToken } from "./StartWillGate";
+import { formatPhoneDisplayFromE164 } from "@/lib/phone";
 import { PAYMENT_PRICES, REMINDER_RECURRING_INTERVAL_MONTHS } from "@/lib/pricing";
 import { WillChatPanel } from "./WillChatPanel";
 import { LetterChatPanel } from "./LetterChatPanel";
@@ -45,13 +46,25 @@ export function ConversationFlow() {
   const [gateMode, setGateMode] = useState<GateMode>("loading");
 
   useEffect(() => {
-    const saved = loadLocalDraft();
+    let saved = loadLocalDraft();
     if (saved) {
       const migrated = migrateWillDraft(saved);
       if (migrated !== saved) {
         saveLocalDraft(migrated);
       }
-      setDraft(migrated);
+      saved = migrated;
+    }
+
+    const sess = readSessionPhone();
+    const sessToken = readSessionWillAccessToken();
+
+    if (saved && sess && sessToken && !saved.willAccessToken && saved.verifiedPhone === sess.normalized) {
+      saved = { ...saved, willAccessToken: sessToken };
+      saveLocalDraft(saved);
+    }
+
+    if (saved) {
+      setDraft(saved);
       const step = saved.step || 1;
       setCurrentStep(step);
       if (step >= 4) {
@@ -61,17 +74,24 @@ export function ConversationFlow() {
       }
     }
 
-    const sess = readSessionPhone();
     const bypass = !!(saved?.paid || saved?.verifiedPhone || sess);
 
     if (bypass) {
       if (sess && saved && !saved.verifiedPhone) {
-        const next = { ...saved, verifiedPhone: sess.normalized };
+        const next = {
+          ...saved,
+          verifiedPhone: sess.normalized,
+          ...(sessToken && !saved.willAccessToken ? { willAccessToken: sessToken } : {}),
+        };
         saveLocalDraft(next);
         setDraft(next);
       } else if (sess && !saved) {
         setDraft((prev) => {
-          const next = { ...prev, verifiedPhone: sess.normalized };
+          const next = {
+            ...prev,
+            verifiedPhone: sess.normalized,
+            ...(sessToken ? { willAccessToken: sessToken } : {}),
+          };
           saveLocalDraft(next);
           return next;
         });
@@ -142,12 +162,47 @@ export function ConversationFlow() {
   );
 
   const handleGateVerified = useCallback(
-    (e164: string) => {
-      saveDraft({ verifiedPhone: e164 });
+    (e164: string, accessToken?: string) => {
+      saveDraft({
+        verifiedPhone: e164,
+        ...(accessToken ? { willAccessToken: accessToken } : {}),
+      });
       setGateMode("ok");
     },
     [saveDraft]
   );
+
+  useEffect(() => {
+    if (gateMode !== "ok") return;
+    if (draft.paid || draft.paidLetter || draft.willAccessToken) return;
+    const sess = readSessionPhone();
+    if (!sess || draft.verifiedPhone !== sess.normalized) return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/start-will", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            phone: formatPhoneDisplayFromE164(sess.normalized),
+            refreshToken: true,
+          }),
+        });
+        const data = (await res.json().catch(() => ({}))) as {
+          ok?: boolean;
+          accessToken?: string;
+        };
+        if (cancelled || !res.ok || !data.ok || typeof data.accessToken !== "string") return;
+        saveDraft({ willAccessToken: data.accessToken });
+      } catch {
+        /* ignore */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [gateMode, draft.paid, draft.paidLetter, draft.willAccessToken, draft.verifiedPhone, saveDraft]);
 
   const handleBackToWillChat = useCallback(() => {
     setSubPhase("chat");

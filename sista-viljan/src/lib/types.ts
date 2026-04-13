@@ -80,6 +80,8 @@ export interface WillDraft {
   userId?: string;
   /** E.164 digits (no +), set after start gate — used for Swish prefills and abuse limits */
   verifiedPhone?: string;
+  /** Bearer-token från /api/start-will när WILL_ACCESS_SECRET är satt (skyddar AI-routes). */
+  willAccessToken?: string;
   /** Räknas upp server-side; tak i aiWillLimits per testamente */
   aiTokenUsage?: WillAiTokenUsage;
   step: number;

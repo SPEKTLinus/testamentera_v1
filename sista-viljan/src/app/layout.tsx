@@ -2,11 +2,14 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Sista Viljan — Skriv ditt testamente online",
+  title: {
+    default: "Sista Viljan - ditt testament",
+    template: "%s · Sista Viljan - ditt testament",
+  },
   description:
     "Skriv ett juridiskt giltigt testamente på 15 minuter. Anpassat för din familjesituation. Låg engångskostnad.",
   openGraph: {
-    title: "Sista Viljan — Skriv ditt testamente online",
+    title: "Sista Viljan - ditt testament",
     description:
       "Skriv ett juridiskt giltigt testamente på 15 minuter. Anpassat för din familjesituation.",
     locale: "sv_SE",

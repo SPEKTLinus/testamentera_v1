@@ -56,9 +56,13 @@ export function Step3Documents({
     setGenerationState("loading");
     setGenerationError(null);
     try {
+      const token = draft.willAccessToken?.trim();
       const res = await fetch("/api/generate-will", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify(draft),
       });
       const data = await res.json().catch(() => ({}));

@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
+import { assertClaudeRouteAccess } from "@/lib/assertAnthropicAccess";
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -14,6 +15,9 @@ Användaren ser aldrig detta block — det används bara internt.`;
 
 export async function POST(req: NextRequest) {
   try {
+    const limited = assertClaudeRouteAccess(req);
+    if (limited) return limited;
+
     const { messages, context } = await req.json();
 
     const systemWithContext = context

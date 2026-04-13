@@ -8,6 +8,7 @@ import {
   finalizeUsageAfterAnthropicTurn,
   getWillAiUsage,
 } from "@/lib/aiWillLimits";
+import { assertAnthropicAccess } from "@/lib/assertAnthropicAccess";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -108,6 +109,9 @@ export async function POST(req: NextRequest) {
     if (!draft) {
       return NextResponse.json({ error: "Saknar utkast" }, { status: 400 });
     }
+
+    const denied = assertAnthropicAccess(req, draft);
+    if (denied) return denied;
 
     if (!draft.paidLetter) {
       return NextResponse.json(
