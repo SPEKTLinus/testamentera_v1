@@ -22,31 +22,54 @@ export function needsCharityWishes(draft: WillDraft): boolean {
   return draft.circumstances.outsideFamily === "charity";
 }
 
-const INTAKE_CHECKS: Array<(d: WillDraft) => boolean> = [
-  (d) => !!d.testatorName?.trim(),
-  (d) => !!d.testatorPersonalNumber?.trim() && PN_REGEX.test(d.testatorPersonalNumber.trim()),
-  (d) => !!d.testatorAddress?.trim(),
-  (d) => !!d.circumstances.willType,
-  (d) => !!d.circumstances.familyStatus,
-  (d) => !!d.circumstances.childrenStatus,
-  (d) => Array.isArray(d.circumstances.assets) && (d.circumstances.assets?.length ?? 0) > 0,
-  (d) => !!d.circumstances.outsideFamily,
-  (d) => !!d.wishes.mainHeir?.trim(),
-  (d) => typeof d.wishes.heirIsPrivateProperty === "boolean",
-  (d) => (needsPartnerStayQuestion(d) ? typeof d.wishes.partnerCanStay === "boolean" : true),
-  (d) => (needsCharityWishes(d) ? !!d.wishes.charityName?.trim() : true),
-  (d) => !!d.wishes.executor?.trim(),
-  (d) => !!d.funeralWishes.burialForm,
-  (d) => !!d.funeralWishes.ceremony,
+const INTAKE_CHECK_DEFS: ReadonlyArray<{ label: string; ok: (d: WillDraft) => boolean }> = [
+  { label: "Ditt namn", ok: (d) => !!d.testatorName?.trim() },
+  {
+    label: "Personnummer (ååååmmdd-xxxx)",
+    ok: (d) => !!d.testatorPersonalNumber?.trim() && PN_REGEX.test(d.testatorPersonalNumber.trim()),
+  },
+  { label: "Adress", ok: (d) => !!d.testatorAddress?.trim() },
+  { label: "Testamentestyp (eget eller gemensamt)", ok: (d) => !!d.circumstances.willType },
+  { label: "Familjesituation", ok: (d) => !!d.circumstances.familyStatus },
+  { label: "Barn / särkullbarn", ok: (d) => !!d.circumstances.childrenStatus },
+  { label: "Tillgångar (minst ett val)", ok: (d) => Array.isArray(d.circumstances.assets) && (d.circumstances.assets?.length ?? 0) > 0 },
+  { label: "Arv utanför familjen", ok: (d) => !!d.circumstances.outsideFamily },
+  { label: "Huvudarvinge", ok: (d) => !!d.wishes.mainHeir?.trim() },
+  {
+    label: "Om bostaden är särskild egendom (ja/nej)",
+    ok: (d) => typeof d.wishes.heirIsPrivateProperty === "boolean",
+  },
+  {
+    label: "Sambo får bo kvar (ja/nej)",
+    ok: (d) => (needsPartnerStayQuestion(d) ? typeof d.wishes.partnerCanStay === "boolean" : true),
+  },
+  {
+    label: "Välgörenhetsorganisation",
+    ok: (d) => (needsCharityWishes(d) ? !!d.wishes.charityName?.trim() : true),
+  },
+  { label: "Bouppteckningsförrättare / testamentsexekutor", ok: (d) => !!d.wishes.executor?.trim() },
+  { label: "Begravningsform", ok: (d) => !!d.funeralWishes.burialForm },
+  { label: "Ceremoni", ok: (d) => !!d.funeralWishes.ceremony },
 ];
 
-export function getIntakeProgressPercent(draft: WillDraft): number {
-  const done = INTAKE_CHECKS.filter((f) => f(draft)).length;
-  return Math.min(95, Math.round((done / INTAKE_CHECKS.length) * 95));
+export function isIntakeComplete(draft: WillDraft): boolean {
+  return INTAKE_CHECK_DEFS.every((x) => x.ok(draft));
 }
 
-export function isIntakeComplete(draft: WillDraft): boolean {
-  return INTAKE_CHECKS.every((f) => f(draft));
+/** Korta svenska rubriker för det som saknas (betalningsgrind). */
+export function getIntakeIncompleteSummaries(draft: WillDraft): string[] {
+  return INTAKE_CHECK_DEFS.filter((x) => !x.ok(draft)).map((x) => x.label);
+}
+
+export function getIntakeProgressPercent(draft: WillDraft): number {
+  const done = INTAKE_CHECK_DEFS.filter((x) => x.ok(draft)).length;
+  if (done === INTAKE_CHECK_DEFS.length) return 100;
+  return Math.min(95, Math.round((done / INTAKE_CHECK_DEFS.length) * 95));
+}
+
+/** Visa primär CTA (betalning/dokument): alla fält OK eller Will markerat insamling klar. */
+export function shouldShowIntakeContinueCta(draft: WillDraft): boolean {
+  return isIntakeComplete(draft) || draft.intakeMarkedComplete === true;
 }
 
 /** Del 1 = du & familj, 2 = arv, 3 = begravning */
@@ -188,6 +211,10 @@ export function mergeWillChatExtraction(
     if (typeof o.speakers === "string") next.funeralWishes.speakers = o.speakers;
     if (typeof o.location === "string") next.funeralWishes.location = o.location;
     if (typeof o.personalMessage === "string") next.funeralWishes.personalMessage = o.personalMessage;
+  }
+
+  if (raw.intakeComplete === true || raw.intakeComplete === "true") {
+    next.intakeMarkedComplete = true;
   }
 
   return next;

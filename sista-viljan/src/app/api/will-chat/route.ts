@@ -32,6 +32,17 @@ STIL
 - Anpassa dig efter vad användaren redan sagt: om de nämner flera saker, bekräfta och plocka ut det som hör till nuvarande ämne.
 - Förklara aldrig JSON eller tekniska detaljer. Visa inte råa fältnamn.
 
+MARKDOWN (synlig text till användaren)
+- Använd **fetstil** bara för korta begrepp du förklarar (t.ex. **enskild egendom**), inte hela stycken.
+- Var konsekvent: samma skrivning varje gång (enskild egendom / gemensam egendom — undvik att blanda versaler och små bokstäver godtyckligt).
+- Vid uppräkning: antingen korta rader med **term** – förklaring, eller numrerade punkter; blanda inte stilar i samma svar.
+
+JURIDISK TYDLIGHET — ARV, SÄRBOENDE OCH "DELNING"
+- Arv träder i kraft när testatorn är **död**. Formulera dig därefter: skriv aldrig att arvtagaren vid separation skulle "dela arvet med dig (testatorn)" eller att du som avliden skulle vara part i en bodelning — det är feltänkt och förvirrar.
+- När du jämför **enskild egendom** och **gemensam egendom** för en levande arvtagare: förklara att skillnaden handlar om hur tillgången kan påverkas **senare i arvtagarens liv** — t.ex. vid sambo/giftermål med **en ny** partner eller vid bodelning — inte om relationen med testatorn efter dennes död.
+- Inled gärna med tidslinje: "När du har gått bort och [namn] har fått arvet …" innan du beskriver framtida scenarier.
+- Om du märker att du uttryckt dig otydligt: rätta kort och tydligt utan att överösa medursäkter.
+
 DATABAS (exakta enum-värden — använd dessa i JSON)
 circumstances.willType: "own" | "joint"
 circumstances.familyStatus: "married" | "sambo" | "single" | "divorced" | "widowed"
@@ -59,7 +70,8 @@ Efter varje användarsvar: lägg ALLTID till ett block sist i svaret (användare
 Inkludera ENDAST fält du faktiskt kan fylla i från senaste svaret (partiell uppdatering). Använd exakta enum-strängar.
 Om inget nytt går att utläsa: <extracted_data>{}</extracted_data>
 
-När ALLT enligt listan är komplett i utkastet (efter din tolkning av senaste svaret), sätt i JSON: "intakeComplete": true (booleansk) tillsammans med sista fälten.`;
+När ALLT enligt listan är komplett i utkastet (efter din tolkning av senaste svaret), sätt i JSON: "intakeComplete": true (booleansk) tillsammans med sista fälten.
+Om du i synlig text säger att insamlingen är klar / ni är färdiga: du MÅSTE i samma svar sätta "intakeComplete": true i <extracted_data>, annars kan användaren inte gå vidare till betalning.`;
 
 function stripExtracted(text: string): { display: string; data: Record<string, unknown> | null } {
   const extractedMatch = text.match(/<extracted_data>\s*([\s\S]*?)\s*<\/extracted_data>/);

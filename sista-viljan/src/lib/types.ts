@@ -86,6 +86,8 @@ export interface WillDraft {
   willAccessToken?: string;
   /** Räknas upp server-side; tak i aiWillLimits per testamente */
   aiTokenUsage?: WillAiTokenUsage;
+  /** Satt av Will i extraktion (intakeComplete) — UI kan visa gå-vidare-knapp även om validering släpat efter */
+  intakeMarkedComplete?: boolean;
   step: number;
   circumstances: Circumstances;
   wishes: Wishes;

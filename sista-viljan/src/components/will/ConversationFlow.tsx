@@ -18,7 +18,12 @@ import { formatPhoneDisplayFromE164 } from "@/lib/phone";
 import { PAYMENT_PRICES, REMINDER_RECURRING_INTERVAL_MONTHS } from "@/lib/pricing";
 import { WillChatPanel } from "./WillChatPanel";
 import { LetterChatPanel } from "./LetterChatPanel";
-import { getIntakeProgressPercent, getIntakeStage, migrateWillDraft } from "@/lib/willChatIntake";
+import {
+  getIntakeProgressPercent,
+  getIntakeStage,
+  migrateWillDraft,
+  isIntakeComplete,
+} from "@/lib/willChatIntake";
 
 const MAIN_OFFSET = "3.5rem"; /* h-14 header */
 
@@ -123,9 +128,12 @@ export function ConversationFlow() {
     setDraft((prev) => {
       if (prev.paid) {
         setSubPhase("documents");
-      } else {
-        setOverlay("paywall");
+        return prev;
       }
+      if (!isIntakeComplete(prev)) {
+        return prev;
+      }
+      setOverlay("paywall");
       return prev;
     });
   }, []);

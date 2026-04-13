@@ -4,7 +4,12 @@ import { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react
 import type { WillDraft, WillAiTokenUsage } from "@/lib/types";
 import { useVoiceInput } from "@/hooks/useVoiceInput";
 import { VoiceButton } from "./VoiceButton";
-import { mergeWillChatExtraction, isIntakeComplete } from "@/lib/willChatIntake";
+import {
+  mergeWillChatExtraction,
+  isIntakeComplete,
+  shouldShowIntakeContinueCta,
+  getIntakeIncompleteSummaries,
+} from "@/lib/willChatIntake";
 
 type Role = "user" | "assistant";
 
@@ -33,6 +38,9 @@ export function WillChatPanel({ draft, onDraftMerged, onContinueFromIntake }: Pr
   }, [draft]);
 
   const intakeDone = isIntakeComplete(draft);
+  const showContinueCta = shouldShowIntakeContinueCta(draft);
+  const missingForPayment = getIntakeIncompleteSummaries(draft);
+  const canProceedToPayment = intakeDone;
 
   const { isListening, isSupported, toggleListening } = useVoiceInput({
     onTranscript: (text) => setInput((prev) => (prev ? `${prev} ${text}` : text)),
@@ -106,7 +114,7 @@ export function WillChatPanel({ draft, onDraftMerged, onContinueFromIntake }: Pr
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, isLoading, intakeDone]);
+  }, [messages, isLoading, intakeDone, showContinueCta]);
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
@@ -172,26 +180,50 @@ export function WillChatPanel({ draft, onDraftMerged, onContinueFromIntake }: Pr
               {error}
             </p>
           )}
-          {intakeDone && (
-            <div
-              className="animate-fade-in-up border border-[#1a2e4a] bg-white px-4 py-4 shadow-sm"
-              style={{ borderRadius: "3px" }}
-            >
-              <p className="mb-1 text-sm font-medium text-ink">Klart att gå vidare</p>
-              <p className="mb-4 text-sm leading-relaxed text-[#4a5568]">
-                Will har all information som behövs för att ta fram ditt testamente. Vill du justera något kan du skriva
-                ett svar till. När du är redo:{" "}
-                {draft.paid
-                  ? "gå vidare till dina dokument."
-                  : "nästa steg är betalning, sedan genereras dokumenten."}
-              </p>
-              <button type="button" onClick={onContinueFromIntake} className="btn-primary px-6 py-2.5 text-sm">
-                Fortsätt
-              </button>
-            </div>
-          )}
           <div ref={messagesEndRef} />
         </div>
+
+        {showContinueCta && (
+          <div
+            className="flex-shrink-0 border-t border-[#1a2e4a] bg-[#f4f6fb] px-4 py-4"
+            style={{ boxShadow: "0 -4px 12px rgba(15, 23, 42, 0.06)" }}
+          >
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-ink">
+                  {intakeDone || draft.paid ? "Klart att gå vidare" : "Nästan klart"}
+                </p>
+                <p className="mt-1 text-sm leading-relaxed text-[#4a5568]">
+                  {draft.paid
+                    ? "Nästa steg är dina dokument och nedladdning."
+                    : canProceedToPayment
+                      ? "Nästa steg är betalning — därefter genereras ditt testamente. Du kan fortfarande skriva i chatten om du vill ändra något."
+                      : "Alla uppgifter måste vara ifyllda enligt checklistan innan du kan betala. Skriv gärna mer i chatten eller komplettera i sidopanelen."}
+                  {!intakeDone && draft.intakeMarkedComplete && (
+                    <span className="mt-1 block text-xs text-[#6b7280]">
+                      Will markerade samtalet som klart, men några fält saknas fortfarande i utkastet — se listan nedan.
+                    </span>
+                  )}
+                </p>
+                {!draft.paid && !canProceedToPayment && missingForPayment.length > 0 && (
+                  <ul className="mt-2 list-inside list-disc text-xs text-[#4a5568]">
+                    {missingForPayment.map((line) => (
+                      <li key={line}>{line}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={onContinueFromIntake}
+                disabled={!draft.paid && !canProceedToPayment}
+                className="btn-primary shrink-0 px-6 py-3 text-sm whitespace-nowrap disabled:pointer-events-none disabled:opacity-45"
+              >
+                {draft.paid ? "Öppna dokument" : "Gå vidare till betalning"}
+              </button>
+            </div>
+          </div>
+        )}
 
         <div className="flex-shrink-0 border-t border-[#e5e5e5] bg-white px-4 py-3">
           <div className="flex items-end gap-2">
