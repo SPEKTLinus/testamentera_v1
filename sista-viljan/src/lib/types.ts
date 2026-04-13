@@ -63,11 +63,19 @@ export interface GeneratedWill {
   generatedAt: string;
 }
 
+/** Kumulativ AI-tokenanvändning (will-chat + generate-will) per testamente */
+export interface WillAiTokenUsage {
+  inputTokens: number;
+  outputTokens: number;
+}
+
 export interface WillDraft {
   id?: string;
   userId?: string;
   /** E.164 digits (no +), set after start gate — used for Swish prefills and abuse limits */
   verifiedPhone?: string;
+  /** Räknas upp server-side; tak50k in / 50k ut per testamente */
+  aiTokenUsage?: WillAiTokenUsage;
   step: number;
   circumstances: Circumstances;
   wishes: Wishes;
@@ -90,7 +98,7 @@ export interface ConsequenceInfo {
 }
 
 // Payment types
-export type PaymentProduct = "will" | "update" | "storage";
+export type PaymentProduct = "will";
 export type PaymentStatus = "idle" | "pending" | "polling" | "paid" | "declined" | "error";
 
 export interface SwishPaymentRequest {

@@ -92,9 +92,9 @@ export async function POST(req: NextRequest) {
 
 function productLabel(product: string): string {
   switch (product) {
-    case "will": return "Sista Viljan - Testamente";
-    case "update": return "Sista Viljan - Uppdatering";
-    case "storage": return "Sista Viljan - Forvaring 5 ar";
-    default: return "Sista Viljan";
+    case "will":
+      return "Sista Viljan - Testamente";
+    default:
+      return "Sista Viljan";
   }
 }

@@ -122,7 +122,8 @@ export function Step4Signing({ elapsedMinutes }: Props) {
 
       <div className="mt-10 pt-8 border-t border-[#e5e5e5]">
         <p className="text-xs text-[#6b7280] leading-relaxed max-w-lg">
-          Kom ihåg att uppdatera ditt testamente om något förändras — nytt barn, ny bostad, ny relation, ny partner. Livsförändringar påverkar vad som är juridiskt korrekt.
+          Om något större förändras — nytt barn, ny bostad, ny relation — kan det vara dags att skriva ett nytt
+          testamente som ersätter det gamla (med nya vittnen). Påminnelser under det första året ingår i ditt köp.
         </p>
       </div>
 

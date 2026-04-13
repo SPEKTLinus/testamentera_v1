@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { PAYMENT_PRICES } from "@/lib/pricing";
+import { PAYMENT_PRICES, REMINDER_INCLUDED_MONTHS } from "@/lib/pricing";
 
 const included = [
   "Juridiskt giltigt testamente enligt Ärvdabalken",
@@ -7,8 +7,7 @@ const included = [
   "Anpassat för din exakta familjesituation",
   "Konsekvensanalys i realtid under processen",
   "Signeringsguide steg för steg",
-  "Livstidslagring av ditt dokument",
-  "Möjlighet att uppdatera vid livsförändringar",
+  `E-postpåminnelser i ${REMINDER_INCLUDED_MONTHS} månader efter köpet`,
 ];
 
 export function Pricing() {
@@ -22,7 +21,8 @@ export function Pricing() {
               Ett pris.<br />Inga överraskningar.
             </h2>
             <p className="text-[#4a5568] text-sm leading-relaxed mb-8">
-              En jurist kostar 3 000–8 000 kr för samma tjänst. Vi tar {PAYMENT_PRICES.will} kr — en gång, för alltid. Inga prenumerationer, inga dolda avgifter.
+              En jurist kostar 3 000–8 000 kr för samma tjänst. Vi tar {PAYMENT_PRICES.will} kr — en gång. Inga
+              prenumerationer. E-postpåminnelser i {REMINDER_INCLUDED_MONTHS} månader ingår.
             </p>
 
             <div className="mb-10">

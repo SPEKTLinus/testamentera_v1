@@ -191,7 +191,7 @@ export function LegalWillDocument({ draft }: { draft: WillDraft }) {
 
         {/* Digital copy disclaimer */}
         <Text style={styles.disclaimer}>
-          {"OBS: Detta är en digital kopia för förvaring. För att testamentet ska vara juridiskt giltigt måste det\n" +
+          {"OBS: Detta är en digital kopia. För att testamentet ska vara juridiskt giltigt måste det\n" +
             "skrivas ut, undertecknas av testatorn och bevittnas av två oberoende vittnen som är närvarande\n" +
             "samtidigt (Ärvdabalken 10 kap 1 §). Den digitala versionen är inte giltig."}
         </Text>

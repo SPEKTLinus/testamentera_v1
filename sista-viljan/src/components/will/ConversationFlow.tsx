@@ -1,16 +1,15 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import type { WillDraft, GeneratedWill } from "@/lib/types";
+import type { WillDraft, GeneratedWill, WillAiTokenUsage } from "@/lib/types";
 import { saveLocalDraft, loadLocalDraft } from "@/lib/supabase";
 import { ProgressBar } from "./ProgressBar";
 import { ConsequencePreview } from "./ConsequencePreview";
 import { Step3Documents } from "./steps/Step3Documents";
 import { Step4Signing } from "./steps/Step4Signing";
 import { SwishPayment } from "./SwishPayment";
-import { StorageUpsell } from "./StorageUpsell";
 import { StartWillGate, readSessionPhone } from "./StartWillGate";
-import { PAYMENT_PRICES } from "@/lib/pricing";
+import { PAYMENT_PRICES, REMINDER_INCLUDED_MONTHS } from "@/lib/pricing";
 import { WillChatPanel } from "./WillChatPanel";
 import { getIntakeProgressPercent, getIntakeStage, isIntakeComplete } from "@/lib/willChatIntake";
 
@@ -23,7 +22,7 @@ function getProgress(step: number, subStep: number, subTotal: number): number {
   return Math.min(stepBase + subProgress, 99);
 }
 
-type OverlayState = "none" | "paywall" | "storage_upsell";
+type OverlayState = "none" | "paywall";
 type GateMode = "loading" | "need_phone" | "ok";
 type SubPhase = "chat" | "documents" | "signing";
 
@@ -112,13 +111,9 @@ export function ConversationFlow() {
     setCurrentStep(4);
     setSubStep(0);
     setSubTotal(1);
-    setOverlay("storage_upsell");
-  }, [saveDraft]);
-
-  const handleStorageUpsellDone = useCallback(() => {
     setOverlay("none");
     setSubPhase("documents");
-  }, []);
+  }, [saveDraft]);
 
   const handleDocumentsComplete = useCallback(() => {
     saveDraft({ step: 5 });
@@ -129,8 +124,11 @@ export function ConversationFlow() {
   }, [saveDraft]);
 
   const handleWillGenerated = useCallback(
-    (generatedWill: GeneratedWill) => {
-      saveDraft({ generatedWill });
+    (generatedWill: GeneratedWill, aiTokenUsage?: WillAiTokenUsage) => {
+      saveDraft({
+        generatedWill,
+        ...(aiTokenUsage ? { aiTokenUsage } : {}),
+      });
     },
     [saveDraft]
   );
@@ -239,7 +237,8 @@ export function ConversationFlow() {
             </h2>
             <p className="text-sm text-[#4a5568] leading-relaxed mb-6">
               Betala {PAYMENT_PRICES.will} kr för att ladda ner ditt juridiska testamente och ditt personliga brev.
-              Engångsbetalning — inga prenumerationer.
+              Engångsbetalning — inga prenumerationer. E-postpåminnelser ingår i {REMINDER_INCLUDED_MONTHS}{" "}
+              månader efter köpet.
             </p>
             <ul className="space-y-2 mb-6">
               {[
@@ -263,15 +262,6 @@ export function ConversationFlow() {
         </FullScreenOverlay>
       )}
 
-      {overlay === "storage_upsell" && (
-        <FullScreenOverlay>
-          <StorageUpsell
-            draftId={draft.id}
-            onAccepted={handleStorageUpsellDone}
-            onDeclined={handleStorageUpsellDone}
-          />
-        </FullScreenOverlay>
-      )}
     </div>
   );
 }

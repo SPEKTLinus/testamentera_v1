@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useEffect, useCallback } from "react";
-import type { WillDraft, GeneratedWill } from "@/lib/types";
+import type { WillDraft, GeneratedWill, WillAiTokenUsage } from "@/lib/types";
 import { buildWillSections } from "@/lib/willTemplate";
 
 interface Props {
@@ -9,7 +9,7 @@ interface Props {
   elapsedMinutes: number;
   onComplete: () => void;
   onEdit: () => void;
-  onWillGenerated?: (generatedWill: GeneratedWill) => void;
+  onWillGenerated?: (generatedWill: GeneratedWill, aiTokenUsage?: WillAiTokenUsage) => void;
 }
 
 export function Step3Documents({ draft, onComplete, onEdit, onWillGenerated }: Props) {
@@ -30,12 +30,15 @@ export function Step3Documents({ draft, onComplete, onEdit, onWillGenerated }: P
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(draft),
       });
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
         throw new Error((data as { error?: string }).error ?? "Okänt fel");
       }
-      const generatedWill: GeneratedWill = await res.json();
-      onWillGenerated?.(generatedWill);
+      const { aiTokenUsage, sections, generatedAt } = data as GeneratedWill & {
+        aiTokenUsage?: WillAiTokenUsage;
+      };
+      const generatedWill: GeneratedWill = { sections, generatedAt };
+      onWillGenerated?.(generatedWill, aiTokenUsage);
       setGenerationState("idle");
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Något gick fel";
@@ -84,8 +87,8 @@ export function Step3Documents({ draft, onComplete, onEdit, onWillGenerated }: P
           <p className="text-xs text-amber-800 leading-relaxed">
             Enligt Ärvdabalken (10 kap 1 §) måste ett testamente{" "}
             <strong>skrivas ut på papper, undertecknas av dig och bevittnas av två oberoende vittnen</strong>{" "}
-            som är närvarande samtidigt. Den digitala versionen kan förvaras här som kopia men gäller
-            inte som testamente förrän det är korrekt underskrivet.
+            som är närvarande samtidigt. PDF-versionen är en kopia — den gäller inte som testamente förrän originalet
+            är korrekt underskrivet.
           </p>
         </div>
       </div>
@@ -176,7 +179,7 @@ export function Step3Documents({ draft, onComplete, onEdit, onWillGenerated }: P
         </p>
         <p className="text-sm text-[#4a5568] mb-4 leading-relaxed">
           När du har skrivit ut och undertecknat testamentet med vittnen kan du ladda upp en
-          inskannad kopia här för säker digital förvaring.
+          inskannad kopia här som referens (valfritt).
         </p>
 
         {uploadedFileName ? (
@@ -349,7 +352,7 @@ function WillHtmlPreview({ draft }: { draft: WillDraft }) {
 
       {/* Digital disclaimer inside document */}
       <div className="bg-amber-50 border border-amber-200 px-4 py-2 mb-6 text-[0.7rem] text-amber-800 text-center">
-        Digital kopia för förvaring — juridiskt giltigt först efter utskrift och underskrift av testatorn samt två vittnen (ÄB 10:1)
+        Digital kopia — juridiskt giltigt först efter utskrift och underskrift av testatorn samt två vittnen (ÄB 10:1)
       </div>
 
       {/* Signature blocks */}

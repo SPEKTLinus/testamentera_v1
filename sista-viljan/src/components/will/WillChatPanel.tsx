@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import type { WillDraft } from "@/lib/types";
+import type { WillDraft, WillAiTokenUsage } from "@/lib/types";
 import { useVoiceInput } from "@/hooks/useVoiceInput";
 import { VoiceButton } from "./VoiceButton";
 import { mergeWillChatExtraction, isIntakeComplete } from "@/lib/willChatIntake";
@@ -58,17 +58,35 @@ export function WillChatPanel({
             draft: draftRef.current,
           }),
         });
-        if (!res.ok) throw new Error("api");
-        const data = (await res.json()) as { text: string; extractedData: Record<string, unknown> | null };
-        const merged = mergeWillChatExtraction(draftRef.current, data.extractedData);
+        const payload = (await res.json().catch(() => ({}))) as {
+          text?: string;
+          extractedData?: Record<string, unknown> | null;
+          aiTokenUsage?: WillAiTokenUsage;
+          error?: string;
+        };
+        if (!res.ok) {
+          setError(
+            payload.error ||
+              `Kunde inte nå assistenten (HTTP ${res.status}). Kontrollera att ANTHROPIC_API_KEY finns i Vercel och deploya om.`
+          );
+          return null;
+        }
+        const mergedBase = mergeWillChatExtraction(
+          draftRef.current,
+          payload.extractedData ?? null
+        );
+        const merged: WillDraft =
+          payload.aiTokenUsage != null
+            ? { ...mergedBase, aiTokenUsage: payload.aiTokenUsage }
+            : mergedBase;
         draftRef.current = merged;
         onDraftMerged(merged);
         if (isIntakeComplete(merged)) {
           onIntakeComplete();
         }
-        return data.text;
+        return payload.text ?? null;
       } catch {
-        setError("Kunde inte ansluta till assistenten. Försök igen.");
+        setError("Nätverksfel. Kontrollera anslutningen och försök igen.");
         return null;
       } finally {
         setIsLoading(false);

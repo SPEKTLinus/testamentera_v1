@@ -1,8 +1,9 @@
-/** Swish amounts in SEK (incl. moms) */
+/** Swish amounts in SEK (incl. moms) — för närvarande endast testamente */
 export const PAYMENT_PRICES = {
-  will: 9,
-  update: 299,
-  storage: 999,
+  will: 499,
 } as const;
+
+/** Ingår i köpet: påminnelser under denna period (marknadsföring / copy) */
+export const REMINDER_INCLUDED_MONTHS = 12;
 
 export type PaymentProductKey = keyof typeof PAYMENT_PRICES;

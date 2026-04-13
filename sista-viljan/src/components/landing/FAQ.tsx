@@ -21,7 +21,7 @@ const faqs = [
   {
     question: "Vad händer om jag vill ändra testamentet senare?",
     answer:
-      "Livet förändras — det ska ditt testamente kunna göra också. Du kan logga in när som helst och uppdatera dina uppgifter. Kom ihåg att ett nytt testamente ersätter det gamla, och att du behöver skriva under det nya dokumentet med vittnen igen.",
+      "Livet förändras — och då kan testamentet behöva skrivas om. Ett nytt testamente som följer formkraven ersätter det gamla och ska undertecknas med två vittnen. Vi skickar påminnelser under de första 12 månaderna efter köpet så du får en chans att tänka till. Vid större ändringar kan det vara bra att rådgöra med jurist.",
   },
   {
     question: "Vad är skillnaden mellan ett eget testamente och ett inbördes testamente?",

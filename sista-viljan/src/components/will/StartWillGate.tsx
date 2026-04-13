@@ -99,7 +99,7 @@ export function StartWillGate({ onVerified }: Props) {
             </Link>
           </p>
           <p className="text-xs text-[#6b7280] leading-relaxed">
-            Konto används bland annat för förvaring och kontaktpersoner. För nya testamenten behöver
+            Konto används bland annat för kontaktpersoner och översikt. För nya testamenten behöver
             du ändå ange mobilnummer här så vi kan nå dig med Swish och hålla kostnaderna nere.
           </p>
         </div>

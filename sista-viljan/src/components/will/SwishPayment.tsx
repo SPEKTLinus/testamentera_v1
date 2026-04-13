@@ -18,8 +18,6 @@ const PRICES: Record<PaymentProduct, number> = { ...PAYMENT_PRICES };
 
 const PRODUCT_LABELS: Record<PaymentProduct, string> = {
   will: "Testamente",
-  update: "Uppdatering av testamente",
-  storage: "Säker förvaring 5 år",
 };
 
 type Stage = "phone" | "waiting" | "paid" | "declined" | "error";

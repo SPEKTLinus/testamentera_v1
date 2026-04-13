@@ -1,8 +1,27 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
 import type { WillDraft } from "@/lib/types";
+import {
+  WILL_AI_MAX_INPUT_TOKENS,
+  WILL_AI_MAX_OUTPUT_TOKENS,
+  checkWillAiBudget,
+  capOutputBudget,
+  getWillAiUsage,
+  type WillAiTokenUsage,
+} from "@/lib/aiWillLimits";
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+/** Höj vid behov på Vercel Pro (Hobby ~10 s kan ge timeout vid långsam AI). */
+export const maxDuration = 60;
+
+function getAnthropic(): Anthropic {
+  const key = process.env.ANTHROPIC_API_KEY;
+  if (!key?.trim()) {
+    throw new Error("MISSING_ANTHROPIC_KEY");
+  }
+  return new Anthropic({ apiKey: key });
+}
 
 const BOOTSTRAP_USER =
   "[Internt: Samtalet startar nu. Svara som assistent med en kort, varm hälsning (1–2 meningar) och ställ sedan din första fråga. Följ datainsamlingsordningen i systemprompten — börja med det som fortfarande saknas högst upp i listan.]";
@@ -71,14 +90,41 @@ function toAnthropicMessages(uiMessages: ChatMessage[]): ChatMessage[] {
   return uiMessages;
 }
 
+function mergeUsage(prev: WillAiTokenUsage, inputDelta: number, outputDelta: number): WillAiTokenUsage {
+  return {
+    inputTokens: prev.inputTokens + inputDelta,
+    outputTokens: prev.outputTokens + outputDelta,
+  };
+}
+
 export async function POST(req: NextRequest) {
   try {
+    let client: Anthropic;
+    try {
+      client = getAnthropic();
+    } catch {
+      console.error("will-chat: ANTHROPIC_API_KEY saknas");
+      return NextResponse.json(
+        {
+          error:
+            "Servern är inte konfigurerad för AI (saknar API-nyckel). Lägg till ANTHROPIC_API_KEY under Environment Variables i Vercel och deploya om.",
+          code: "MISSING_ANTHROPIC_KEY",
+        },
+        { status: 503 }
+      );
+    }
+
     const body = await req.json();
     const draft = body.draft as WillDraft | undefined;
     const uiMessages = (body.messages || []) as ChatMessage[];
 
     if (!draft) {
       return NextResponse.json({ error: "Saknar utkast" }, { status: 400 });
+    }
+
+    const budget = checkWillAiBudget(draft);
+    if (!budget.ok) {
+      return NextResponse.json({ error: budget.message, code: "TOKEN_LIMIT" }, { status: 429 });
     }
 
     const contextBlock = `Nuvarande utkast (JSON — använd detta för att se vad som redan är ifyllt och vad som saknas):\n${JSON.stringify(
@@ -96,16 +142,43 @@ export async function POST(req: NextRequest) {
 
     const system = `${WILL_CHAT_SYSTEM}\n\n${contextBlock}`;
 
+    const maxTokens = capOutputBudget(draft, 2048);
+    if (maxTokens <= 0) {
+      return NextResponse.json(
+        {
+          error: "Inget utrymme kvar för fler AI-svar inom taket för det här testamentet.",
+          code: "TOKEN_LIMIT",
+        },
+        { status: 429 }
+      );
+    }
+
     const response = await client.messages.create({
       model: "claude-sonnet-4-20250514",
-      max_tokens: 2048,
+      max_tokens: maxTokens,
       system,
       messages: toAnthropicMessages(uiMessages) as Anthropic.MessageCreateParams["messages"],
     });
 
+    const inTok = response.usage?.input_tokens ?? 0;
+    const outTok = response.usage?.output_tokens ?? 0;
+    const prevUsage = getWillAiUsage(draft);
+    const newUsage = mergeUsage(prevUsage, inTok, outTok);
+
+    if (newUsage.inputTokens > WILL_AI_MAX_INPUT_TOKENS || newUsage.outputTokens > WILL_AI_MAX_OUTPUT_TOKENS) {
+      return NextResponse.json(
+        {
+          error: "Det här AI-svaret skulle överskrida maxgränsen för testamentet. Försök med ett kortare meddelande.",
+          code: "TOKEN_LIMIT_EXCEEDED",
+          aiTokenUsage: prevUsage,
+        },
+        { status: 429 }
+      );
+    }
+
     const content = response.content[0];
     if (content.type !== "text") {
-      return NextResponse.json({ error: "Unexpected response type" }, { status: 500 });
+      return NextResponse.json({ error: "Oväntat svar från AI" }, { status: 500 });
     }
 
     const { display, data } = stripExtracted(content.text);
@@ -113,9 +186,30 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       text: display,
       extractedData: data,
+      aiTokenUsage: newUsage,
     });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("will-chat error:", error);
-    return NextResponse.json({ error: "AI-tjänsten är inte tillgänglig just nu." }, { status: 500 });
+    const err = error as { status?: number; message?: string };
+    if (err?.status === 401 || err?.status === 403) {
+      return NextResponse.json(
+        { error: "AI-nyckeln är ogiltig eller saknar behörighet. Kontrollera ANTHROPIC_API_KEY.", code: "AUTH" },
+        { status: 503 }
+      );
+    }
+    if (err?.status === 429) {
+      return NextResponse.json(
+        { error: "AI-tjänsten är tillfälligt överbelastad. Försök igen om en stund.", code: "RATE_LIMIT" },
+        { status: 429 }
+      );
+    }
+    return NextResponse.json(
+      {
+        error:
+          "AI-tjänsten svarade inte som förväntat. Om felet kvarstår: kontrollera Vercel-loggar, ANTHROPIC_API_KEY och att projektet inte timeoutar (maxDuration).",
+        code: "AI_ERROR",
+      },
+      { status: 500 }
+    );
   }
 }
