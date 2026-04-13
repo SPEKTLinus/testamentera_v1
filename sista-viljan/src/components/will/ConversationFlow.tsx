@@ -11,6 +11,7 @@ import { SwishPayment } from "./SwishPayment";
 import { StartWillGate, readSessionPhone } from "./StartWillGate";
 import { PAYMENT_PRICES, REMINDER_INCLUDED_MONTHS } from "@/lib/pricing";
 import { WillChatPanel } from "./WillChatPanel";
+import { LetterChatPanel } from "./LetterChatPanel";
 import { getIntakeProgressPercent, getIntakeStage, migrateWillDraft } from "@/lib/willChatIntake";
 
 const MAIN_OFFSET = "3.5rem"; /* h-14 header */
@@ -24,9 +25,9 @@ function getProgress(step: number, subStep: number, subTotal: number): number {
   return Math.min(stepBase + subProgress, 99);
 }
 
-type OverlayState = "none" | "paywall";
+type OverlayState = "none" | "paywall" | "letter_paywall";
 type GateMode = "loading" | "need_phone" | "ok";
-type SubPhase = "chat" | "documents" | "signing";
+type SubPhase = "chat" | "documents" | "signing" | "letter_chat";
 
 export function ConversationFlow() {
   const [draft, setDraft] = useState<WillDraft>({
@@ -43,7 +44,7 @@ export function ConversationFlow() {
   const [overlay, setOverlay] = useState<OverlayState>("none");
   const [gateMode, setGateMode] = useState<GateMode>("loading");
 
-   useEffect(() => {
+  useEffect(() => {
     const saved = loadLocalDraft();
     if (saved) {
       const migrated = migrateWillDraft(saved);
@@ -140,10 +141,29 @@ export function ConversationFlow() {
     [saveDraft]
   );
 
-  const handleEditWill = useCallback(() => {
+  const handleBackToWillChat = useCallback(() => {
     setSubPhase("chat");
     setCurrentStep(1);
     setOverlay("none");
+  }, []);
+
+  const handleOpenLetterFlow = useCallback(() => {
+    if (draft.paidLetter) {
+      setSubPhase("letter_chat");
+    } else {
+      setOverlay("letter_paywall");
+    }
+  }, [draft.paidLetter]);
+
+  const handleLetterPaymentPaid = useCallback(() => {
+    saveDraft({ paidLetter: true });
+    setOverlay("none");
+    setSubPhase("letter_chat");
+  }, [saveDraft]);
+
+  const handleLetterChatMerged = useCallback((merged: WillDraft) => {
+    saveLocalDraft(merged);
+    setDraft(merged);
   }, []);
 
   const intakePercent = getIntakeProgressPercent(draft);
@@ -152,14 +172,18 @@ export function ConversationFlow() {
   const progress =
     subPhase === "chat"
       ? intakePercent
-      : getProgress(currentStep, subStep, subTotal);
+      : subPhase === "letter_chat"
+        ? getProgress(4, 0, 1)
+        : getProgress(currentStep, subStep, subTotal);
 
   const headerStepLabel =
     subPhase === "chat"
       ? `Samtal — del ${intakeStage} av 3`
-      : currentStep < 5
-        ? `Steg ${Math.min(4, currentStep)} av 4`
-        : "Klart";
+      : subPhase === "letter_chat"
+        ? "Personligt brev"
+        : currentStep < 5
+          ? `Steg ${Math.min(4, currentStep)} av 4`
+          : "Klart";
 
   const elapsedMinutes = Math.round((Date.now() - startTime) / 60000);
 
@@ -213,14 +237,27 @@ export function ConversationFlow() {
                 </div>
               </aside>
             </div>
+          ) : subPhase === "letter_chat" ? (
+            <div
+              className="mx-auto max-w-4xl px-0 py-4 sm:py-8"
+              style={{ minHeight: `calc(100vh - ${MAIN_OFFSET})` }}
+            >
+              <div className="flex min-h-[calc(100vh-4rem)] flex-col lg:min-h-[calc(100vh-3.5rem)]">
+                <LetterChatPanel
+                  draft={draft}
+                  onDraftMerged={handleLetterChatMerged}
+                  onBackToDocuments={() => setSubPhase("documents")}
+                />
+              </div>
+            </div>
           ) : (
             <div className="mx-auto max-w-4xl px-0 py-10 sm:py-12">
               {subPhase === "documents" && (
                 <Step3Documents
                   draft={draft}
-                  elapsedMinutes={elapsedMinutes}
                   onComplete={handleDocumentsComplete}
-                  onEdit={handleEditWill}
+                  onBackToWillChat={handleBackToWillChat}
+                  onOpenLetterFlow={handleOpenLetterFlow}
                   onWillGenerated={handleWillGenerated}
                 />
               )}
@@ -238,14 +275,13 @@ export function ConversationFlow() {
               Ditt testamente är klart.
             </h2>
             <p className="text-sm text-[#4a5568] leading-relaxed mb-6">
-              Betala {PAYMENT_PRICES.will} kr för att ladda ner ditt juridiska testamente och ditt personliga brev.
+              Betala {PAYMENT_PRICES.will} kr för att ladda ner ditt juridiska testamente.
               Engångsbetalning — inga prenumerationer. E-postpåminnelser ingår i {REMINDER_INCLUDED_MONTHS}{" "}
-              månader efter köpet.
+              månader efter köpet. Ett separat personligt brev kan du köpa till på dokument-sidan.
             </p>
             <ul className="space-y-2 mb-6">
               {[
-                "Juridiskt giltigt testamente",
-                "Personligt brev till dina nära",
+                "Juridiskt testamente (PDF)",
                 "Signeringsguide steg för steg",
               ].map((item) => (
                 <li key={item} className="flex items-center gap-2 text-sm text-[#4a5568]">
@@ -259,6 +295,28 @@ export function ConversationFlow() {
               draftId={draft.id}
               initialPhoneE164={draft.verifiedPhone}
               onPaid={handlePaymentPaid}
+            />
+          </div>
+        </FullScreenOverlay>
+      )}
+
+      {overlay === "letter_paywall" && (
+        <FullScreenOverlay>
+          <div className="max-w-md w-full animate-fade-in-up">
+            <p className="label-overline mb-4">Personligt brev</p>
+            <h2 className="font-heading text-2xl font-semibold mb-2 leading-tight">
+              Eget samtal för ditt brev
+            </h2>
+            <p className="text-sm text-[#4a5568] leading-relaxed mb-6">
+              Betala {PAYMENT_PRICES.letter} kr för att öppna ett separat samtal med Will där du formulerar ett
+              personligt brev till dina nära — minnen, tack och det du vill förmedla. Det är inte juridiskt bindande.
+            </p>
+            <SwishPayment
+              product="letter"
+              draftId={draft.id}
+              initialPhoneE164={draft.verifiedPhone}
+              onPaid={handleLetterPaymentPaid}
+              onCancel={() => setOverlay("none")}
             />
           </div>
         </FullScreenOverlay>

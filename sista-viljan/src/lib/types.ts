@@ -63,6 +63,12 @@ export interface GeneratedWill {
   generatedAt: string;
 }
 
+/** Personligt brev (dokument 2) — egen betalning och brev-chatt */
+export interface PersonalLetter {
+  body?: string;
+  updatedAt?: string;
+}
+
 /** Kumulativ AI-tokenanvändning (will-chat + generate-will) per testamente */
 export interface WillAiTokenUsage {
   inputTokens: number;
@@ -84,8 +90,11 @@ export interface WillDraft {
   testatorPersonalNumber?: string;
   testatorAddress?: string;
   partnerName?: string;
-  /** Om användaren vill ha dokument 2 (personligt brev) — sätts i chatten */
+  /** Tidigare flöde: om personen velat brev (används vid migration till paidLetter) */
   wantsPersonalLetter?: boolean;
+  /** Betald tilläggstjänst: personligt brev med egen chatt */
+  paidLetter?: boolean;
+  personalLetter?: PersonalLetter;
   completedAt?: string;
   paid?: boolean;
   createdAt?: string;
@@ -100,7 +109,7 @@ export interface ConsequenceInfo {
 }
 
 // Payment types
-export type PaymentProduct = "will";
+export type PaymentProduct = "will" | "letter";
 export type PaymentStatus = "idle" | "pending" | "polling" | "paid" | "declined" | "error";
 
 export interface SwishPaymentRequest {

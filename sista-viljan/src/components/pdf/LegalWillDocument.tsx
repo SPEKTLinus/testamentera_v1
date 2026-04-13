@@ -129,7 +129,8 @@ const styles = StyleSheet.create({
 });
 
 export function LegalWillDocument({ draft }: { draft: WillDraft }) {
-  const sections = buildWillSections(draft);
+  const aiSections = draft.generatedWill?.sections;
+  const templateSections = buildWillSections(draft);
   const today = new Date().toLocaleDateString("sv-SE", {
     day: "numeric",
     month: "long",
@@ -163,38 +164,47 @@ export function LegalWillDocument({ draft }: { draft: WillDraft }) {
         </Text>
 
         {/* Numbered sections */}
-        {sections.map((s) => (
-          <View key={s.number} style={styles.sectionRow}>
-            <Text style={styles.sectionNum}>{s.number}.</Text>
-            <View style={styles.sectionBody}>
-              <Text style={styles.sectionTitle}>{s.title}</Text>
-              {s.intro ? (
-                <Text style={[styles.sectionText, { marginBottom: 4 }]}>{s.intro}</Text>
-              ) : null}
-              {s.isBulletList ? (
-                s.lines.map((line, i) => (
-                  <View key={i} style={styles.bulletRow}>
-                    <Text style={styles.bullet}>{"•"}</Text>
-                    <Text style={styles.bulletText}>{line}</Text>
-                  </View>
-                ))
-              ) : (
-                s.lines.map((line, i) => (
-                  <Text key={i} style={styles.sectionText}>{line}</Text>
-                ))
-              )}
-            </View>
-          </View>
-        ))}
+        {aiSections && aiSections.length > 0
+          ? aiSections.map((s, i) => (
+              <View key={i} style={styles.sectionRow}>
+                <Text style={styles.sectionNum}>{i + 1}.</Text>
+                <View style={styles.sectionBody}>
+                  <Text style={styles.sectionTitle}>{s.title}</Text>
+                  {s.text.split(/\n+/).map((para, j) => (
+                    <Text key={j} style={[styles.sectionText, { marginBottom: 4 }]}>
+                      {para}
+                    </Text>
+                  ))}
+                </View>
+              </View>
+            ))
+          : templateSections.map((s) => (
+              <View key={s.number} style={styles.sectionRow}>
+                <Text style={styles.sectionNum}>{s.number}.</Text>
+                <View style={styles.sectionBody}>
+                  <Text style={styles.sectionTitle}>{s.title}</Text>
+                  {s.intro ? (
+                    <Text style={[styles.sectionText, { marginBottom: 4 }]}>{s.intro}</Text>
+                  ) : null}
+                  {s.isBulletList ? (
+                    s.lines.map((line, i) => (
+                      <View key={i} style={styles.bulletRow}>
+                        <Text style={styles.bullet}>{"•"}</Text>
+                        <Text style={styles.bulletText}>{line}</Text>
+                      </View>
+                    ))
+                  ) : (
+                    s.lines.map((line, i) => (
+                      <Text key={i} style={styles.sectionText}>
+                        {line}
+                      </Text>
+                    ))
+                  )}
+                </View>
+              </View>
+            ))}
 
         <View style={styles.divider} />
-
-        {/* Digital copy disclaimer */}
-        <Text style={styles.disclaimer}>
-          {"OBS: Detta är en digital kopia. För att testamentet ska vara juridiskt giltigt måste det\n" +
-            "skrivas ut, undertecknas av testatorn och bevittnas av två oberoende vittnen som är närvarande\n" +
-            "samtidigt (Ärvdabalken 10 kap 1 §). Den digitala versionen är inte giltig."}
-        </Text>
 
         {/* Signature: testator */}
         <View style={styles.signatureGrid}>

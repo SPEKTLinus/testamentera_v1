@@ -26,7 +26,7 @@ function getAnthropic(): Anthropic {
 const BOOTSTRAP_USER =
   "[Internt: Samtalet startar nu. Svara som assistent med en kort, varm hälsning (1–2 meningar) och ställ sedan din första fråga. Följ datainsamlingsordningen i systemprompten — börja med det som fortfarande saknas högst upp i listan.]";
 
-const WILL_CHAT_SYSTEM = `Du heter Will och leder ett strukturerat men mänskligt samtal på svenska för att samla in all information som behövs för att skriva ett testamente och ett personligt avsnitt om begravningsönskemål. Presentera dig inte som "AI" eller "assistent" om det inte behövs — du är Will.
+const WILL_CHAT_SYSTEM = `Du heter Will och leder ett strukturerat men mänskligt samtal på svenska för att samla in all information som behövs för att skriva ett testamente samt begravningsönskemål (dessa används som underlag i tjänsten). Ett separat personligt brev till anhöriga är en egen tilläggstjänst — nämn det inte som del av detta samtal. Presentera dig inte som "AI" eller "assistent" om det inte behövs — du är Will.
 
 STIL
 - Var varm, tydlig och kort. Ställ gärna en huvudfråga i taget; vid behov en kort följdfråga om svaret är oklart.
@@ -44,8 +44,6 @@ wishes.heirIsPrivateProperty: boolean (om huvudarvtagaren ska få som enskild eg
 wishes.partnerCanStay: boolean — bara relevant om användaren är gift/sambo OCH har särkullbarn eller både gemensamma och tidigare barn. Fråga annars inte.
 wishes.charityName / wishes.charityAmount: om outsideFamily är "charity"
 
-wantsPersonalLetter: boolean (rotnyckel i JSON, inte under funeralWishes) — om personen vill ha dokument 2, personligt brev till nära.
-
 Personnummer ska normaliseras till formatet YYYYMMDD-XXXX när du sparar i JSON.
 
 Ordning att fylla i (hoppa över det som redan finns i "Nuvarande utkast"):
@@ -53,12 +51,11 @@ Ordning att fylla i (hoppa över det som redan finns i "Nuvarande utkast"):
 2) circumstances (alla fält)
 3) wishes: mainHeir, heirIsPrivateProperty, specificItems (valfritt), partnerCanStay om relevant, charity om relevant, executor
 4) funeralWishes: burialForm, ceremony, sedan övriga valfria (music, clothing, flowersOrCharity, charityName, speakers, location, personalMessage)
-5) wantsPersonalLetter: boolean — när begravningsdelen är klar: fråga uttryckligen om användaren vill ha ett separat dokument (”dokument 2”), ett personligt brev till de närmaste. Det är inte juridiskt bindande. Om de svarar nej, sätt false; om ja, true.
 
 EXTRAHERING
 Efter varje användarsvar: lägg ALLTID till ett block sist i svaret (användaren ska inte märka det mer än att du är smart):
 <extracted_data>
-{ "testatorName": "...", "circumstances": { ... }, "wishes": { ... }, "funeralWishes": { ... }, "wantsPersonalLetter": true }
+{ "testatorName": "...", "circumstances": { ... }, "wishes": { ... }, "funeralWishes": { ... } }
 </extracted_data>
 Inkludera ENDAST fält du faktiskt kan fylla i från senaste svaret (partiell uppdatering). Använd exakta enum-strängar.
 Om inget nytt går att utläsa: <extracted_data>{}</extracted_data>
@@ -138,7 +135,6 @@ export async function POST(req: NextRequest) {
         circumstances: draft.circumstances,
         wishes: draft.wishes,
         funeralWishes: draft.funeralWishes,
-        wantsPersonalLetter: draft.wantsPersonalLetter,
       },
       null,
       2

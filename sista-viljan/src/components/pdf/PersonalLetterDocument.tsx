@@ -72,6 +72,8 @@ export function PersonalLetterDocument({ draft }: Props) {
     year: "numeric",
   });
 
+  const letterFromChat = draft.personalLetter?.body?.trim();
+
   const burialLabels: Record<string, string> = {
     burial: "Jordbegravning",
     cremation: "Kremering",
@@ -94,7 +96,13 @@ export function PersonalLetterDocument({ draft }: Props) {
           Skrivet den {today}.
         </Text>
 
-        {(f.burialForm || f.ceremony) && (
+        {letterFromChat ? (
+          <View>
+            <Text style={styles.personalMessage}>{letterFromChat}</Text>
+          </View>
+        ) : null}
+
+        {!letterFromChat && (f.burialForm || f.ceremony) && (
           <View>
             <Text style={styles.sectionTitle}>Begravning</Text>
             {f.burialForm && f.burialForm !== "no_preference" && (
@@ -106,21 +114,21 @@ export function PersonalLetterDocument({ draft }: Props) {
           </View>
         )}
 
-        {f.music && (
+        {!letterFromChat && f.music && (
           <View>
             <Text style={styles.sectionTitle}>Musik</Text>
             <Text style={styles.text}>{f.music}</Text>
           </View>
         )}
 
-        {f.clothing && (
+        {!letterFromChat && f.clothing && (
           <View>
             <Text style={styles.sectionTitle}>Klädsel</Text>
             <Text style={styles.text}>{f.clothing}</Text>
           </View>
         )}
 
-        {f.flowersOrCharity && (
+        {!letterFromChat && f.flowersOrCharity && (
           <View>
             <Text style={styles.sectionTitle}>Blommor eller insamling</Text>
             <Text style={styles.text}>
@@ -129,21 +137,21 @@ export function PersonalLetterDocument({ draft }: Props) {
           </View>
         )}
 
-        {f.speakers && (
+        {!letterFromChat && f.speakers && (
           <View>
             <Text style={styles.sectionTitle}>Tal</Text>
             <Text style={styles.text}>{f.speakers}</Text>
           </View>
         )}
 
-        {f.location && (
+        {!letterFromChat && f.location && (
           <View>
             <Text style={styles.sectionTitle}>Plats</Text>
             <Text style={styles.text}>{f.location}</Text>
           </View>
         )}
 
-        {f.personalMessage && (
+        {!letterFromChat && f.personalMessage && (
           <View>
             <View style={styles.divider} />
             <Text style={styles.sectionTitle}>Till er jag lämnar efter mig</Text>

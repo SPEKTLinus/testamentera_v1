@@ -18,6 +18,7 @@ const PRICES: Record<PaymentProduct, number> = { ...PAYMENT_PRICES };
 
 const PRODUCT_LABELS: Record<PaymentProduct, string> = {
   will: "Testamente",
+  letter: "Personligt brev",
 };
 
 type Stage = "phone" | "waiting" | "paid" | "declined" | "error";

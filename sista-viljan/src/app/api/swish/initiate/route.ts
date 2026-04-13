@@ -94,6 +94,8 @@ function productLabel(product: string): string {
   switch (product) {
     case "will":
       return "Sista Viljan - Testamente";
+    case "letter":
+      return "Sista Viljan - Personligt brev";
     default:
       return "Sista Viljan";
   }
