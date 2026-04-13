@@ -1,20 +1,18 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import type { WillDraft, Circumstances, Wishes, FuneralWishes, GeneratedWill } from "@/lib/types";
+import type { WillDraft, GeneratedWill } from "@/lib/types";
 import { saveLocalDraft, loadLocalDraft } from "@/lib/supabase";
 import { ProgressBar } from "./ProgressBar";
 import { ConsequencePreview } from "./ConsequencePreview";
-import { Step1Circumstances } from "./steps/Step1Circumstances";
-import { StepTestatorInfo } from "./steps/StepTestatorInfo";
-import { Step2Wishes } from "./steps/Step2Wishes";
-import { Step2bFuneral } from "./steps/Step2bFuneral";
 import { Step3Documents } from "./steps/Step3Documents";
 import { Step4Signing } from "./steps/Step4Signing";
 import { SwishPayment } from "./SwishPayment";
 import { StorageUpsell } from "./StorageUpsell";
 import { StartWillGate, readSessionPhone } from "./StartWillGate";
 import { PAYMENT_PRICES } from "@/lib/pricing";
+import { WillChatPanel } from "./WillChatPanel";
+import { getIntakeProgressPercent, getIntakeStage, isIntakeComplete } from "@/lib/willChatIntake";
 
 const TOTAL_STEPS = 5;
 
@@ -27,8 +25,7 @@ function getProgress(step: number, subStep: number, subTotal: number): number {
 
 type OverlayState = "none" | "paywall" | "storage_upsell";
 type GateMode = "loading" | "need_phone" | "ok";
-// step 1 = circumstances, 1.5 = testator info, 2 = wishes, 3 = funeral, 4 = docs, 5 = signing
-type SubPhase = "circumstances" | "testatorInfo" | "wishes" | "funeral" | "documents" | "signing";
+type SubPhase = "chat" | "documents" | "signing";
 
 export function ConversationFlow() {
   const [draft, setDraft] = useState<WillDraft>({
@@ -38,9 +35,9 @@ export function ConversationFlow() {
     funeralWishes: {},
   });
   const [currentStep, setCurrentStep] = useState(1);
-  const [subPhase, setSubPhase] = useState<SubPhase>("circumstances");
+  const [subPhase, setSubPhase] = useState<SubPhase>("chat");
   const [subStep, setSubStep] = useState(0);
-  const [subTotal, setSubTotal] = useState(5);
+  const [subTotal, setSubTotal] = useState(1);
   const [startTime] = useState(Date.now());
   const [overlay, setOverlay] = useState<OverlayState>("none");
   const [gateMode, setGateMode] = useState<GateMode>("loading");
@@ -51,12 +48,11 @@ export function ConversationFlow() {
       setDraft(saved);
       const step = saved.step || 1;
       setCurrentStep(step);
-      // Restore subPhase from saved step
-      if (step === 1) setSubPhase("circumstances");
-      else if (step === 2) setSubPhase("wishes");
-      else if (step === 3) setSubPhase("funeral");
-      else if (step === 4) setSubPhase("documents");
-      else if (step === 5) setSubPhase("signing");
+      if (step >= 4) {
+        setSubPhase(step === 5 ? "signing" : "documents");
+      } else {
+        setSubPhase("chat");
+      }
     }
 
     const sess = readSessionPhone();
@@ -80,94 +76,33 @@ export function ConversationFlow() {
     }
   }, []);
 
-  // Use functional updates to avoid stale closure bugs when multiple updates
-  // fire in the same render cycle (e.g. step components calling onUpdate twice).
+  useEffect(() => {
+    if (gateMode !== "ok" || subPhase !== "chat" || draft.paid) return;
+    if (isIntakeComplete(draft)) {
+      setOverlay("paywall");
+    }
+  }, [gateMode, subPhase, draft]);
+
   const saveDraft = useCallback((updates: Partial<WillDraft>) => {
-    setDraft(prev => {
+    setDraft((prev) => {
       const updated = { ...prev, ...updates };
       saveLocalDraft(updated);
       return updated;
     });
   }, []);
 
-  const handleCircumstancesUpdate = useCallback(
-    (circumstances: Partial<Circumstances>, sub: number, total: number) => {
-      setDraft(prev => {
-        const updated = { ...prev, circumstances: { ...prev.circumstances, ...circumstances } };
-        saveLocalDraft(updated);
-        return updated;
-      });
-      setSubStep(sub);
-      setSubTotal(total);
-    },
-    []
-  );
-
-  const handleCircumstancesComplete = useCallback(() => {
-    // Don't advance step number yet — go to testator info first
-    setSubPhase("testatorInfo");
-    setSubStep(5);
-    setSubTotal(9);
+  const handleChatDraftMerged = useCallback((merged: WillDraft) => {
+    saveLocalDraft(merged);
+    setDraft(merged);
   }, []);
 
-  const handleTestatorComplete = useCallback(
-    (data: { name: string; personalNumber: string; address: string }) => {
-      saveDraft({
-        step: 2,
-        testatorName: data.name,
-        testatorPersonalNumber: data.personalNumber,
-        testatorAddress: data.address,
-      });
-      setCurrentStep(2);
-      setSubPhase("wishes");
-      setSubStep(0);
-      setSubTotal(6);
-    },
-    [saveDraft]
-  );
-
-  const handleWishesUpdate = useCallback(
-    (wishes: Partial<Wishes>, sub: number, total: number) => {
-      setDraft(prev => {
-        const updated = { ...prev, wishes: { ...prev.wishes, ...wishes } };
-        saveLocalDraft(updated);
-        return updated;
-      });
-      setSubStep(sub);
-      setSubTotal(total);
-    },
-    []
-  );
-
-  const handleWishesComplete = useCallback(() => {
-    saveDraft({ step: 3 });
-    setCurrentStep(3);
-    setSubPhase("funeral");
-    setSubStep(0);
-    setSubTotal(8);
-  }, [saveDraft]);
-
-  const handleFuneralUpdate = useCallback(
-    (funeralWishes: Partial<FuneralWishes>, sub: number, total: number) => {
-      setDraft(prev => {
-        const updated = { ...prev, funeralWishes: { ...prev.funeralWishes, ...funeralWishes } };
-        saveLocalDraft(updated);
-        return updated;
-      });
-      setSubStep(sub);
-      setSubTotal(total);
-    },
-    []
-  );
-
-  const handleFuneralComplete = useCallback(() => {
-    // If already paid (editing after payment), skip paywall and go straight to documents
-    setDraft(prev => {
+  const handleIntakeReadyForPayment = useCallback(() => {
+    setDraft((prev) => {
       if (prev.paid) {
         setSubPhase("documents");
-        return prev;
+      } else {
+        setOverlay("paywall");
       }
-      setOverlay("paywall");
       return prev;
     });
   }, []);
@@ -208,15 +143,27 @@ export function ConversationFlow() {
     [saveDraft]
   );
 
-  // Allow editing wishes/funeral after payment without requiring re-payment
   const handleEditWill = useCallback(() => {
-    setSubPhase("wishes");
-    setCurrentStep(2);
-    setSubStep(0);
-    setSubTotal(6);
+    setSubPhase("chat");
+    setCurrentStep(1);
+    setOverlay("none");
   }, []);
 
-  const progress = getProgress(currentStep, subStep, subTotal);
+  const intakePercent = getIntakeProgressPercent(draft);
+  const intakeStage = getIntakeStage(draft);
+
+  const progress =
+    subPhase === "chat"
+      ? intakePercent
+      : getProgress(currentStep, subStep, subTotal);
+
+  const headerStepLabel =
+    subPhase === "chat"
+      ? `Samtal — del ${intakeStage} av 3`
+      : currentStep < 5
+        ? `Steg ${Math.min(4, currentStep)} av 4`
+        : "Klart";
+
   const elapsedMinutes = Math.round((Date.now() - startTime) / 60000);
 
   if (gateMode === "loading") {
@@ -233,7 +180,6 @@ export function ConversationFlow() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Top nav */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-[#e5e5e5]">
         <div className="max-w-6xl mx-auto px-6 h-14 flex items-center gap-6">
           <a href="/" className="font-heading text-base font-semibold text-ink flex-shrink-0">
@@ -243,48 +189,22 @@ export function ConversationFlow() {
             <ProgressBar percent={progress} />
           </div>
           <div className="flex-shrink-0 text-xs text-[#6b7280] hidden sm:block">
-            {currentStep < 5 ? `Steg ${currentStep} av 4` : "Klart"}
+            {headerStepLabel}
           </div>
         </div>
       </header>
 
-      {/* Main content */}
       <div className="pt-14 min-h-screen">
         <div className="max-w-6xl mx-auto px-6">
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-0 lg:gap-16 min-h-[calc(100vh-56px)]">
-            {/* Left: conversation */}
             <div className="py-12 lg:py-16 lg:border-r border-[#e5e5e5] lg:pr-16">
-              {subPhase === "circumstances" && (
-                <Step1Circumstances
-                  circumstances={draft.circumstances}
-                  onUpdate={handleCircumstancesUpdate}
-                  onComplete={handleCircumstancesComplete}
-                />
-              )}
-              {subPhase === "testatorInfo" && (
-                <StepTestatorInfo
-                  initial={{
-                    name: draft.testatorName,
-                    personalNumber: draft.testatorPersonalNumber,
-                    address: draft.testatorAddress,
-                  }}
-                  onComplete={handleTestatorComplete}
-                />
-              )}
-              {subPhase === "wishes" && (
-                <Step2Wishes
-                  circumstances={draft.circumstances}
-                  wishes={draft.wishes}
-                  onUpdate={handleWishesUpdate}
-                  onComplete={handleWishesComplete}
-                />
-              )}
-              {subPhase === "funeral" && (
-                <Step2bFuneral
-                  funeralWishes={draft.funeralWishes}
-                  testatorName={draft.testatorName}
-                  onUpdate={handleFuneralUpdate}
-                  onComplete={handleFuneralComplete}
+              {subPhase === "chat" && (
+                <WillChatPanel
+                  draft={draft}
+                  onDraftMerged={handleChatDraftMerged}
+                  onIntakeComplete={handleIntakeReadyForPayment}
+                  intakeStage={intakeStage}
+                  intakePercent={intakePercent}
                 />
               )}
               {subPhase === "documents" && (
@@ -296,13 +216,10 @@ export function ConversationFlow() {
                   onWillGenerated={handleWillGenerated}
                 />
               )}
-              {subPhase === "signing" && (
-                <Step4Signing elapsedMinutes={elapsedMinutes} />
-              )}
+              {subPhase === "signing" && <Step4Signing elapsedMinutes={elapsedMinutes} />}
             </div>
 
-            {/* Right: consequence preview */}
-            {currentStep <= 3 && (
+            {subPhase === "chat" && (
               <div className="hidden lg:block py-16">
                 <div className="sticky top-20">
                   <ConsequencePreview circumstances={draft.circumstances} />
@@ -313,7 +230,6 @@ export function ConversationFlow() {
         </div>
       </div>
 
-      {/* Paywall overlay — Swish */}
       {overlay === "paywall" && (
         <FullScreenOverlay>
           <div className="max-w-md w-full animate-fade-in-up">
@@ -347,7 +263,6 @@ export function ConversationFlow() {
         </FullScreenOverlay>
       )}
 
-      {/* Storage upsell — full screen, after payment */}
       {overlay === "storage_upsell" && (
         <FullScreenOverlay>
           <StorageUpsell
