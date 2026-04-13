@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react";
 import type { WillDraft, WillAiTokenUsage } from "@/lib/types";
 import { LETTER_CHAT_MAX_AI_TURNS, letterChatTurnsRemaining } from "@/lib/pricing";
 import { useVoiceInput } from "@/hooks/useVoiceInput";
@@ -53,9 +53,8 @@ export function LetterChatPanel({ draft, onDraftMerged, onFinishLetterChat }: Pr
   const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const draftRef = useRef(draft);
-  const letterBootstrapStarted = useRef(false);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     draftRef.current = draft;
   }, [draft]);
 
@@ -113,8 +112,8 @@ export function LetterChatPanel({ draft, onDraftMerged, onFinishLetterChat }: Pr
   );
 
   useEffect(() => {
-    if (letterBootstrapStarted.current) return;
-    letterBootstrapStarted.current = true;
+    if (!draft.verifiedPhone?.trim()) return;
+
     let cancelled = false;
     (async () => {
       if (draftRef.current.personalLetterChatLocked) {
@@ -134,7 +133,7 @@ export function LetterChatPanel({ draft, onDraftMerged, onFinishLetterChat }: Pr
     return () => {
       cancelled = true;
     };
-  }, [runApi]);
+  }, [runApi, draft.verifiedPhone]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });

@@ -4,6 +4,7 @@ import { toE164Digits } from "@/lib/phone";
 import { getRequestIp } from "@/lib/requestIp";
 import { takeRateSlot, RATE_START_WILL } from "@/lib/apiRateLimit";
 import { mintWillAccessToken } from "@/lib/willAccessToken";
+import { normalizeEmail, isValidEmail } from "@/lib/email";
 
 function maxStarts(): number {
   const raw = process.env.MAX_WILLS_PER_PHONE;
@@ -32,6 +33,17 @@ export async function POST(req: NextRequest) {
         { ok: false, error: "Ange ett giltigt svenskt mobilnummer (07X-XXXXXXX)." },
         { status: 400 }
       );
+    }
+
+    if (!refreshOnly) {
+      const rawEmail = typeof body.email === "string" ? body.email : "";
+      const email = normalizeEmail(rawEmail);
+      if (!isValidEmail(email)) {
+        return NextResponse.json(
+          { ok: false, error: "Ange en giltig e-postadress (för kvitto och kontakt)." },
+          { status: 400 }
+        );
+      }
     }
 
     const ip = getRequestIp(req);

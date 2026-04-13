@@ -8,7 +8,12 @@ import { ConsequencePreview } from "./ConsequencePreview";
 import { Step3Documents } from "./steps/Step3Documents";
 import { Step4Signing } from "./steps/Step4Signing";
 import { SwishPayment } from "./SwishPayment";
-import { StartWillGate, readSessionPhone, readSessionWillAccessToken } from "./StartWillGate";
+import {
+  StartWillGate,
+  readSessionPhone,
+  readSessionWillAccessToken,
+  readSessionContactEmail,
+} from "./StartWillGate";
 import { formatPhoneDisplayFromE164 } from "@/lib/phone";
 import { PAYMENT_PRICES, REMINDER_RECURRING_INTERVAL_MONTHS } from "@/lib/pricing";
 import { WillChatPanel } from "./WillChatPanel";
@@ -77,8 +82,14 @@ export function ConversationFlow() {
         toShow = { ...toShow, willAccessToken: sessToken };
         saveLocalDraft(toShow);
       }
+      const sessMail = readSessionContactEmail();
+      if (sessMail && !toShow.contactEmail) {
+        toShow = { ...toShow, contactEmail: sessMail };
+        saveLocalDraft(toShow);
+      }
       applyDraftToNavigationState(toShow);
     } else {
+      const sessMail = readSessionContactEmail();
       const fresh: WillDraft = {
         step: 1,
         circumstances: {},
@@ -86,6 +97,7 @@ export function ConversationFlow() {
         funeralWishes: {},
         verifiedPhone: sess.normalized,
         ...(sessToken ? { willAccessToken: sessToken } : {}),
+        ...(sessMail ? { contactEmail: sessMail } : {}),
       };
       applyDraftToNavigationState(fresh);
       saveLocalDraft(fresh);
@@ -154,7 +166,7 @@ export function ConversationFlow() {
   );
 
   const handleGateVerified = useCallback(
-    (e164: string, accessToken?: string) => {
+    (e164: string, accessToken: string | undefined, email: string) => {
       const existing = loadLocalDraftForPhone(e164);
       const token =
         accessToken?.trim() ||
@@ -169,6 +181,7 @@ export function ConversationFlow() {
           funeralWishes: {},
         }),
         verifiedPhone: e164,
+        contactEmail: email,
         ...(token ? { willAccessToken: token } : {}),
       });
       applyDraftToNavigationState(next);
@@ -388,6 +401,7 @@ export function ConversationFlow() {
               product="will"
               draftId={draft.id}
               initialPhoneE164={draft.verifiedPhone}
+              initialEmail={draft.contactEmail}
               onPaid={handlePaymentPaid}
             />
           </div>
@@ -409,6 +423,7 @@ export function ConversationFlow() {
               product="letter"
               draftId={draft.id}
               initialPhoneE164={draft.verifiedPhone}
+              initialEmail={draft.contactEmail}
               onPaid={handleLetterPaymentPaid}
               onCancel={() => setOverlay("none")}
             />

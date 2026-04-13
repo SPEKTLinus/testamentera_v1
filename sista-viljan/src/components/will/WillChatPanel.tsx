@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react";
 import type { WillDraft, WillAiTokenUsage } from "@/lib/types";
 import { useVoiceInput } from "@/hooks/useVoiceInput";
 import { VoiceButton } from "./VoiceButton";
@@ -27,7 +27,8 @@ export function WillChatPanel({ draft, onDraftMerged, onContinueFromIntake }: Pr
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const draftRef = useRef(draft);
 
-  useEffect(() => {
+  /** Synka före paint så första will-chat-anropet inte skickar utkast utan verifiedPhone (race med useEffect). */
+  useLayoutEffect(() => {
     draftRef.current = draft;
   }, [draft]);
 
@@ -90,6 +91,8 @@ export function WillChatPanel({ draft, onDraftMerged, onContinueFromIntake }: Pr
   );
 
   useEffect(() => {
+    if (!draft.verifiedPhone?.trim()) return;
+
     let cancelled = false;
     (async () => {
       const text = await runApi([]);
@@ -99,7 +102,7 @@ export function WillChatPanel({ draft, onDraftMerged, onContinueFromIntake }: Pr
     return () => {
       cancelled = true;
     };
-  }, [runApi]);
+  }, [runApi, draft.verifiedPhone]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });

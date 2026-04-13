@@ -4,12 +4,15 @@ import { useState, useEffect, useRef } from "react";
 import type { PaymentProduct } from "@/lib/types";
 import { PAYMENT_PRICES } from "@/lib/pricing";
 import { formatPhoneDisplayFromE164 } from "@/lib/phone";
+import { isValidEmail, normalizeEmail } from "@/lib/email";
 
 interface SwishPaymentProps {
   product: PaymentProduct;
   draftId?: string;
   /** E.164 digits without + — prefills Swish payer field; user can still edit */
   initialPhoneE164?: string;
+  /** Från startgrinden — kvitto skickas hit (kan ändras) */
+  initialEmail?: string;
   onPaid: () => void;
   onCancel?: () => void;
 }
@@ -23,10 +26,18 @@ const PRODUCT_LABELS: Record<PaymentProduct, string> = {
 
 type Stage = "phone" | "waiting" | "paid" | "declined" | "error";
 
-export function SwishPayment({ product, draftId, initialPhoneE164, onPaid, onCancel }: SwishPaymentProps) {
+export function SwishPayment({
+  product,
+  draftId,
+  initialPhoneE164,
+  initialEmail,
+  onPaid,
+  onCancel,
+}: SwishPaymentProps) {
   const [phone, setPhone] = useState(() =>
     initialPhoneE164 ? formatPhoneDisplayFromE164(initialPhoneE164) : ""
   );
+  const [email, setEmail] = useState(() => initialEmail?.trim() ?? "");
   const [stage, setStage] = useState<Stage>("phone");
   const [paymentId, setPaymentId] = useState<string | null>(null);
   const [isDemo, setIsDemo] = useState(false);
@@ -42,6 +53,12 @@ export function SwishPayment({ product, draftId, initialPhoneE164, onPaid, onCan
     }
   }, [initialPhoneE164]);
 
+  useEffect(() => {
+    if (initialEmail?.trim()) {
+      setEmail(initialEmail.trim());
+    }
+  }, [initialEmail]);
+
   const formatPhone = (raw: string) => {
     const digits = raw.replace(/\D/g, "");
     if (digits.length <= 3) return digits;
@@ -55,6 +72,11 @@ export function SwishPayment({ product, draftId, initialPhoneE164, onPaid, onCan
 
   const handleSubmit = async () => {
     setErrorMsg("");
+    const em = normalizeEmail(email);
+    if (!isValidEmail(em)) {
+      setErrorMsg("Ange en giltig e-postadress för kvitto.");
+      return;
+    }
     const res = await fetch("/api/swish/initiate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -100,7 +122,19 @@ export function SwishPayment({ product, draftId, initialPhoneE164, onPaid, onCan
       if (data.status === "PAID") {
         setStage("paid");
         if (pollRef.current) clearInterval(pollRef.current);
-        // Small delay for UX
+        const receiptEmail = normalizeEmail(email);
+        if (isValidEmail(receiptEmail)) {
+          fetch("/api/send-purchase-receipt", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              email: receiptEmail,
+              product,
+              amount: price,
+              paymentId: paymentId ?? undefined,
+            }),
+          }).catch(() => {});
+        }
         setTimeout(onPaid, 1200);
       } else if (data.status === "DECLINED" || data.status === "CANCELLED") {
         setStage("declined");
@@ -116,7 +150,7 @@ export function SwishPayment({ product, draftId, initialPhoneE164, onPaid, onCan
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
     };
-  }, [stage, paymentId, isDemo, onPaid]);
+  }, [stage, paymentId, isDemo, onPaid, email, product, price]);
 
   return (
     <div className="space-y-6">
@@ -153,17 +187,31 @@ export function SwishPayment({ product, draftId, initialPhoneE164, onPaid, onCan
               autoFocus
               onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
             />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-ink mb-2">E-post (kvitto)</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="du@example.com"
+              autoComplete="email"
+              className="w-full border border-[#e5e5e5] px-4 py-3 text-base text-ink focus:outline-none focus:border-[#1a2e4a] transition-colors"
+              style={{ borderRadius: "3px" }}
+              onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
+            />
             {errorMsg && (
               <p className="text-sm text-red-600 mt-2">{errorMsg}</p>
             )}
           </div>
           <p className="text-xs text-[#6b7280] leading-relaxed">
-            Du får en betalningsbegäran i Swish-appen. Engångsbetalning — inga prenumerationer.
+            Du får en betalningsbegäran i Swish-appen. Kvitto skickas till e-posten ovan (Resend). Engångsbetalning —
+            inga prenumerationer.
           </p>
           <div className="flex gap-3">
             <button
               onClick={handleSubmit}
-              disabled={phone.replace(/\D/g, "").length < 10}
+              disabled={phone.replace(/\D/g, "").length < 10 || !isValidEmail(normalizeEmail(email))}
               className="btn-primary disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
             >
               <SwishIcon />
