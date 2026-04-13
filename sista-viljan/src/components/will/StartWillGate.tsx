@@ -70,7 +70,9 @@ export function StartWillGate({ onVerified }: Props) {
         </h1>
         <p className="text-sm text-[#4a5568] leading-relaxed mb-6">
           Vi använder numret för att begränsa missbruk av samtalet (kostnader för AI), förifylla Swish
-          när du betalar och kunna skicka kvitto. Du kan ändra numret vid betalning om du vill.
+          när du betalar och kunna skicka kvitto. Du kan ändra numret vid betalning om du vill. På en
+          delad dator: ditt utkast knyts till numret du anger — någon annan med annat nummer ser inte dina
+          uppgifter.
         </p>
 
         <div className="space-y-4 mb-6">

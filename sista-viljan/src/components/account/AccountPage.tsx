@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { loadLocalDraft } from "@/lib/supabase";
+import { loadLocalDraftForPhone } from "@/lib/supabase";
+import { readSessionPhone } from "@/components/will/StartWillGate";
 import type { ContactPerson, WillDraft } from "@/lib/types";
 import { REMINDER_RECURRING_INTERVAL_MONTHS } from "@/lib/pricing";
 
@@ -12,7 +13,8 @@ export function AccountPage() {
   const [showAddContact, setShowAddContact] = useState(false);
 
   useEffect(() => {
-    const saved = loadLocalDraft();
+    const sess = readSessionPhone();
+    const saved = sess ? loadLocalDraftForPhone(sess.normalized) : null;
     setDraft(saved);
     const storedContacts = localStorage.getItem("contact_persons");
     if (storedContacts) setContacts(JSON.parse(storedContacts));
@@ -72,7 +74,11 @@ export function AccountPage() {
                 ) : (
                   <div>
                     <p className="text-sm text-[#6b7280] mb-3">
-                      {draft ? "Påbörjat testamente — inte betalt ännu." : "Inget testamente ännu."}
+                      {draft
+                        ? "Påbörjat testamente — inte betalt ännu."
+                        : readSessionPhone()
+                          ? "Inget utkast sparat för det här numret i den här webbläsaren."
+                          : "Inget lokalt utkast i den här sessionen. Öppna Skriv testamente och ange mobilnummer — utkast sparas per nummer på enheten."}
                     </p>
                     <a href="/app" className="btn-primary text-sm py-2.5 px-5">
                       {draft ? "Fortsätt" : "Skriv testamente"}

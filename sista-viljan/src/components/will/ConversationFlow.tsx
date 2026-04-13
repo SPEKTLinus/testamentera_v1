@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import type { WillDraft, GeneratedWill, WillAiTokenUsage } from "@/lib/types";
-import { saveLocalDraft, loadLocalDraft } from "@/lib/supabase";
+import { saveLocalDraft, loadLocalDraftForPhone } from "@/lib/supabase";
 import { ProgressBar } from "./ProgressBar";
 import { ConsequencePreview } from "./ConsequencePreview";
 import { Step3Documents } from "./steps/Step3Documents";
@@ -45,62 +45,54 @@ export function ConversationFlow() {
   const [overlay, setOverlay] = useState<OverlayState>("none");
   const [gateMode, setGateMode] = useState<GateMode>("loading");
 
-  useEffect(() => {
-    let saved = loadLocalDraft();
-    if (saved) {
-      const migrated = migrateWillDraft(saved);
-      if (migrated !== saved) {
-        saveLocalDraft(migrated);
-      }
-      saved = migrated;
+  const applyDraftToNavigationState = useCallback((saved: WillDraft) => {
+    setDraft(saved);
+    const step = saved.step || 1;
+    setCurrentStep(step);
+    if (step >= 4) {
+      setSubPhase(step === 5 ? "signing" : "documents");
+    } else {
+      setSubPhase("chat");
     }
+  }, []);
 
+  useEffect(() => {
     const sess = readSessionPhone();
     const sessToken = readSessionWillAccessToken();
 
-    if (saved && sess && sessToken && !saved.willAccessToken && saved.verifiedPhone === sess.normalized) {
-      saved = { ...saved, willAccessToken: sessToken };
-      saveLocalDraft(saved);
-    }
-
-    if (saved) {
-      setDraft(saved);
-      const step = saved.step || 1;
-      setCurrentStep(step);
-      if (step >= 4) {
-        setSubPhase(step === 5 ? "signing" : "documents");
-      } else {
-        setSubPhase("chat");
-      }
-    }
-
-    const bypass = !!(saved?.paid || saved?.verifiedPhone || sess);
-
-    if (bypass) {
-      if (sess && saved && !saved.verifiedPhone) {
-        const next = {
-          ...saved,
-          verifiedPhone: sess.normalized,
-          ...(sessToken && !saved.willAccessToken ? { willAccessToken: sessToken } : {}),
-        };
-        saveLocalDraft(next);
-        setDraft(next);
-      } else if (sess && !saved) {
-        setDraft((prev) => {
-          const next = {
-            ...prev,
-            verifiedPhone: sess.normalized,
-            ...(sessToken ? { willAccessToken: sessToken } : {}),
-          };
-          saveLocalDraft(next);
-          return next;
-        });
-      }
-      setGateMode("ok");
-    } else {
+    if (!sess) {
+      setDraft({ step: 1, circumstances: {}, wishes: {}, funeralWishes: {} });
       setGateMode("need_phone");
+      return;
     }
-  }, []);
+
+    const saved = loadLocalDraftForPhone(sess.normalized);
+    if (saved) {
+      const migrated = migrateWillDraft(saved);
+      let toShow = migrated;
+      if (migrated !== saved) {
+        saveLocalDraft(migrated);
+      }
+      if (sessToken && !toShow.willAccessToken && toShow.verifiedPhone === sess.normalized) {
+        toShow = { ...toShow, willAccessToken: sessToken };
+        saveLocalDraft(toShow);
+      }
+      applyDraftToNavigationState(toShow);
+    } else {
+      const fresh: WillDraft = {
+        step: 1,
+        circumstances: {},
+        wishes: {},
+        funeralWishes: {},
+        verifiedPhone: sess.normalized,
+        ...(sessToken ? { willAccessToken: sessToken } : {}),
+      };
+      applyDraftToNavigationState(fresh);
+      saveLocalDraft(fresh);
+    }
+
+    setGateMode("ok");
+  }, [applyDraftToNavigationState]);
 
   const saveDraft = useCallback((updates: Partial<WillDraft>) => {
     setDraft((prev) => {
@@ -163,13 +155,27 @@ export function ConversationFlow() {
 
   const handleGateVerified = useCallback(
     (e164: string, accessToken?: string) => {
-      saveDraft({
+      const existing = loadLocalDraftForPhone(e164);
+      const token =
+        accessToken?.trim() ||
+        existing?.willAccessToken?.trim() ||
+        readSessionWillAccessToken()?.trim() ||
+        undefined;
+      const next: WillDraft = migrateWillDraft({
+        ...(existing ?? {
+          step: 1,
+          circumstances: {},
+          wishes: {},
+          funeralWishes: {},
+        }),
         verifiedPhone: e164,
-        ...(accessToken ? { willAccessToken: accessToken } : {}),
+        ...(token ? { willAccessToken: token } : {}),
       });
+      applyDraftToNavigationState(next);
+      saveLocalDraft(next);
       setGateMode("ok");
     },
-    [saveDraft]
+    [applyDraftToNavigationState]
   );
 
   useEffect(() => {
