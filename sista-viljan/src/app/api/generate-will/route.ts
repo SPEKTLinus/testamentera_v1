@@ -2,12 +2,10 @@ import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
 import type { WillDraft } from "@/lib/types";
 import {
-  WILL_AI_MAX_INPUT_TOKENS,
-  WILL_AI_MAX_OUTPUT_TOKENS,
   checkWillAiBudget,
   capOutputBudget,
+  finalizeUsageAfterAnthropicTurn,
   getWillAiUsage,
-  type WillAiTokenUsage,
 } from "@/lib/aiWillLimits";
 
 export const dynamic = "force-dynamic";
@@ -97,13 +95,6 @@ Valfri avslutande sektion "Övriga villkor": endast om du redan har minst en inn
   return lines.join("\n");
 }
 
-function mergeUsage(prev: WillAiTokenUsage, inputDelta: number, outputDelta: number): WillAiTokenUsage {
-  return {
-    inputTokens: prev.inputTokens + inputDelta,
-    outputTokens: prev.outputTokens + outputDelta,
-  };
-}
-
 export async function POST(req: NextRequest) {
   try {
     let client: Anthropic;
@@ -147,18 +138,18 @@ export async function POST(req: NextRequest) {
     const inTok = response.usage?.input_tokens ?? 0;
     const outTok = response.usage?.output_tokens ?? 0;
     const prevUsage = getWillAiUsage(draft);
-    const newUsage = mergeUsage(prevUsage, inTok, outTok);
-
-    if (newUsage.inputTokens > WILL_AI_MAX_INPUT_TOKENS || newUsage.outputTokens > WILL_AI_MAX_OUTPUT_TOKENS) {
+    const usageCheck = finalizeUsageAfterAnthropicTurn(prevUsage, inTok, outTok);
+    if (!usageCheck.ok) {
       return NextResponse.json(
         {
-          error: "Genereringen skulle överskrida maxgränsen för AI per testamente.",
-          code: "TOKEN_LIMIT_EXCEEDED",
-          aiTokenUsage: prevUsage,
+          error: usageCheck.error,
+          code: usageCheck.code,
+          aiTokenUsage: usageCheck.aiTokenUsage,
         },
         { status: 429 }
       );
     }
+    const newUsage = usageCheck.aiTokenUsage;
 
     const content = response.content[0];
     if (content.type !== "text") {

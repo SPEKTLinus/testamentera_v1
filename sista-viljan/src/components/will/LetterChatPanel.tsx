@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import type { WillDraft, WillAiTokenUsage } from "@/lib/types";
+import { LETTER_CHAT_MAX_AI_TURNS, letterChatTurnsRemaining } from "@/lib/pricing";
 import { useVoiceInput } from "@/hooks/useVoiceInput";
 import { VoiceButton } from "./VoiceButton";
 
@@ -20,7 +21,8 @@ interface Props {
 function mergeLetterIntoDraft(
   draft: WillDraft,
   letterBody: string | null | undefined,
-  aiTokenUsage?: WillAiTokenUsage
+  aiTokenUsage?: WillAiTokenUsage,
+  letterChatAssistantRounds?: number
 ): WillDraft {
   const next: WillDraft = {
     ...draft,
@@ -36,6 +38,9 @@ function mergeLetterIntoDraft(
   if (aiTokenUsage != null) {
     next.aiTokenUsage = aiTokenUsage;
   }
+  if (letterChatAssistantRounds !== undefined) {
+    next.letterChatAssistantRounds = letterChatAssistantRounds;
+  }
   return next;
 }
 
@@ -46,6 +51,7 @@ export function LetterChatPanel({ draft, onDraftMerged }: Props) {
   const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const draftRef = useRef(draft);
+  const letterBootstrapStarted = useRef(false);
 
   useEffect(() => {
     draftRef.current = draft;
@@ -73,13 +79,20 @@ export function LetterChatPanel({ draft, onDraftMerged }: Props) {
           text?: string;
           letterBody?: string | null;
           aiTokenUsage?: WillAiTokenUsage;
+          letterChatAssistantRounds?: number;
           error?: string;
+          code?: string;
         };
         if (!res.ok) {
           setError(payload.error || `Kunde inte nå Will (HTTP ${res.status}).`);
           return null;
         }
-        const merged = mergeLetterIntoDraft(draftRef.current, payload.letterBody ?? null, payload.aiTokenUsage);
+        const merged = mergeLetterIntoDraft(
+          draftRef.current,
+          payload.letterBody ?? null,
+          payload.aiTokenUsage,
+          payload.letterChatAssistantRounds
+        );
         draftRef.current = merged;
         onDraftMerged(merged);
         return payload.text ?? null;
@@ -94,8 +107,16 @@ export function LetterChatPanel({ draft, onDraftMerged }: Props) {
   );
 
   useEffect(() => {
+    if (letterBootstrapStarted.current) return;
+    letterBootstrapStarted.current = true;
     let cancelled = false;
     (async () => {
+      if (letterChatTurnsRemaining(draftRef.current) <= 0) {
+        setError(
+          "Du har använt alla svar som ingår i brev-köpet. Kontakta oss om du behöver fortsätta."
+        );
+        return;
+      }
       const text = await runApi([]);
       if (cancelled || !text) return;
       setMessages((prev) => (prev.length > 0 ? prev : [{ role: "assistant", content: text }]));
@@ -109,8 +130,11 @@ export function LetterChatPanel({ draft, onDraftMerged }: Props) {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isLoading]);
 
+  const letterRemaining = letterChatTurnsRemaining(draft);
+  const atLetterLimit = letterRemaining <= 0;
+
   const handleSend = async () => {
-    if (!input.trim() || isLoading) return;
+    if (!input.trim() || isLoading || atLetterLimit) return;
     const text = input.trim();
     setInput("");
     const userMsg: ChatMessage = { role: "user", content: text };
@@ -139,6 +163,18 @@ export function LetterChatPanel({ draft, onDraftMerged }: Props) {
         </h1>
         <p className="mt-2 max-w-xl text-sm leading-relaxed text-[#4a5568]">
           Det här är inte juridik. Will lyssnar och gör bara lätta språkjusteringar — din röst och dina ord ska synas.
+        </p>
+        <p className="mt-2 text-xs text-[#6b7280]">
+          {atLetterLimit ? (
+            <span className="text-amber-800">
+              Du har använt alla {LETTER_CHAT_MAX_AI_TURNS} svar som ingår i brev-köpet. Kontakta oss om du behöver mer.
+            </span>
+          ) : (
+            <>
+              Brev-paketet: <strong>{letterRemaining}</strong> svar från Will kvar (max {LETTER_CHAT_MAX_AI_TURNS} per köp,
+              inkl. första hälsningen).
+            </>
+          )}
         </p>
       </div>
 
@@ -208,8 +244,8 @@ export function LetterChatPanel({ draft, onDraftMerged }: Props) {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Skriv här…"
-              disabled={isLoading}
+                           placeholder={atLetterLimit ? "Gräns nådd — kontakta oss vid behov." : "Skriv här…"}
+              disabled={isLoading || atLetterLimit}
               rows={2}
               className="min-h-[42px] flex-1 resize-none border border-[#e5e5e5] px-3 py-2.5 text-sm text-ink transition-colors focus:border-[#1a2e4a] focus:outline-none disabled:opacity-50"
               style={{ borderRadius: "3px" }}
@@ -223,7 +259,7 @@ export function LetterChatPanel({ draft, onDraftMerged }: Props) {
             <button
               type="button"
               onClick={handleSend}
-              disabled={!input.trim() || isLoading}
+              disabled={!input.trim() || isLoading || atLetterLimit}
               className="btn-primary h-[42px] shrink-0 px-4 py-0 text-sm disabled:cursor-not-allowed disabled:opacity-40"
             >
               Skicka

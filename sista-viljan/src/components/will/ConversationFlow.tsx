@@ -268,6 +268,8 @@ export function ConversationFlow() {
               {subPhase === "signing" && (
                 <Step4Signing
                   elapsedMinutes={elapsedMinutes}
+                  draft={draft}
+                  onOpenLetterFlow={handleOpenLetterFlow}
                   onBackToDocuments={handleBackToDocumentsFromSigning}
                 />
               )}

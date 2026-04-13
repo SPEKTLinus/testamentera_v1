@@ -1,9 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import type { WillDraft } from "@/lib/types";
+import { PAYMENT_PRICES } from "@/lib/pricing";
 
 interface Props {
   elapsedMinutes: number;
+  draft: WillDraft;
+  /** Köp / öppna personligt brev (499 kr tillägg) */
+  onOpenLetterFlow: () => void;
   onBackToDocuments?: () => void;
 }
 
@@ -43,7 +48,7 @@ const CHECKLIST = [
   },
 ];
 
-export function Step4Signing({ elapsedMinutes, onBackToDocuments }: Props) {
+export function Step4Signing({ elapsedMinutes, draft, onOpenLetterFlow, onBackToDocuments }: Props) {
   const [checked, setChecked] = useState<Set<string>>(new Set());
 
   const toggle = (id: string) => {
@@ -118,6 +123,22 @@ export function Step4Signing({ elapsedMinutes, onBackToDocuments }: Props) {
           <p className="text-sm text-[#4a5568]">
             Det tog {elapsedMinutes > 0 ? `${elapsedMinutes} minuter` : "en kort stund"}.
           </p>
+        </div>
+      )}
+
+      {!draft.paidLetter && (
+        <div className="mt-10 border border-[#e5e5e5] bg-[#f9fafb] p-6">
+          <p className="label-overline mb-2">Tillägg</p>
+          <p className="font-heading text-lg font-semibold text-ink mb-2">
+            Vill du lägga till ett personligt brev?
+          </p>
+          <p className="text-sm text-[#4a5568] leading-relaxed mb-4 max-w-xl">
+            Ett eget samtal med Will för ett brev till dina nära — om minnen, tacksamhet och det du vill förmedla. Juridiskt
+            testamente och brev är <strong>två skilda köp</strong>: brevet kostar {PAYMENT_PRICES.letter} kr till.
+          </p>
+          <button type="button" onClick={onOpenLetterFlow} className="btn-primary text-sm py-2.5 px-5">
+            Köp personligt brev ({PAYMENT_PRICES.letter} kr) →
+          </button>
         </div>
       )}
 

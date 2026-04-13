@@ -1,8 +1,11 @@
 import type { WillDraft } from "./types";
 
-/** Max kumulativa tokens per testamente (alla AI-anrop: chatt + generering). */
-export const WILL_AI_MAX_INPUT_TOKENS = 50_000;
-export const WILL_AI_MAX_OUTPUT_TOKENS = 50_000;
+/**
+ * Kumulativa tokens per utkast (intake-chatt + testamentegenerering + personligt brev).
+ * Brevchatten skickar hela historiken + hela brevutkastet varje gång — input växer snabbt.
+ */
+export const WILL_AI_MAX_INPUT_TOKENS = 200_000;
+export const WILL_AI_MAX_OUTPUT_TOKENS = 150_000;
 
 export type WillAiTokenUsage = {
   inputTokens: number;
@@ -14,6 +17,54 @@ export function getWillAiUsage(draft: WillDraft): WillAiTokenUsage {
     inputTokens: draft.aiTokenUsage?.inputTokens ?? 0,
     outputTokens: draft.aiTokenUsage?.outputTokens ?? 0,
   };
+}
+
+export function mergeWillAiUsage(
+  prev: WillAiTokenUsage,
+  inputDelta: number,
+  outputDelta: number
+): WillAiTokenUsage {
+  return {
+    inputTokens: prev.inputTokens + inputDelta,
+    outputTokens: prev.outputTokens + outputDelta,
+  };
+}
+
+export type UsageAfterAnthropicResult =
+  | { ok: true; aiTokenUsage: WillAiTokenUsage }
+  | {
+      ok: false;
+      error: string;
+      code: "TOKEN_LIMIT_EXCEEDED_INPUT" | "TOKEN_LIMIT_EXCEEDED_OUTPUT";
+      aiTokenUsage: WillAiTokenUsage;
+    };
+
+/** Efter ett Anthropic-anrop: uppdatera kumulativ usage eller avvisa om tak överskrids. */
+export function finalizeUsageAfterAnthropicTurn(
+  prev: WillAiTokenUsage,
+  inputDelta: number,
+  outputDelta: number
+): UsageAfterAnthropicResult {
+  const next = mergeWillAiUsage(prev, inputDelta, outputDelta);
+  if (next.inputTokens > WILL_AI_MAX_INPUT_TOKENS) {
+    return {
+      ok: false,
+      code: "TOKEN_LIMIT_EXCEEDED_INPUT",
+      error:
+        "Konversationen har blivit för lång för den här sessionen: all text som skickas med (samtal + brevutkast) har nått en teknisk gräns. Det handlar inte om att ditt senaste meddelande är för långt. Kontakta oss om du behöver fortsätta, eller kopiera brevet och spara det säkert.",
+      aiTokenUsage: prev,
+    };
+  }
+  if (next.outputTokens > WILL_AI_MAX_OUTPUT_TOKENS) {
+    return {
+      ok: false,
+      code: "TOKEN_LIMIT_EXCEEDED_OUTPUT",
+      error:
+        "Den samlade AI-användningen för det här utkastet har nått gränsen (alla Wills svar räknas ihop). Kontakta oss om du behöver mer utrymme.",
+      aiTokenUsage: prev,
+    };
+  }
+  return { ok: true, aiTokenUsage: next };
 }
 
 export function checkWillAiBudget(draft: WillDraft): { ok: true } | { ok: false; message: string } {

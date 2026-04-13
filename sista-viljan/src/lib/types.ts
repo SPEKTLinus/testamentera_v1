@@ -80,7 +80,7 @@ export interface WillDraft {
   userId?: string;
   /** E.164 digits (no +), set after start gate — used for Swish prefills and abuse limits */
   verifiedPhone?: string;
-  /** Räknas upp server-side; tak50k in / 50k ut per testamente */
+  /** Räknas upp server-side; tak i aiWillLimits per testamente */
   aiTokenUsage?: WillAiTokenUsage;
   step: number;
   circumstances: Circumstances;
@@ -94,6 +94,8 @@ export interface WillDraft {
   wantsPersonalLetter?: boolean;
   /** Betald tilläggstjänst: personligt brev med egen chatt */
   paidLetter?: boolean;
+  /** Räknas upp av server vid varje lyckat letter-chat-svar; tak LETTER_CHAT_MAX_AI_TURNS */
+  letterChatAssistantRounds?: number;
   personalLetter?: PersonalLetter;
   completedAt?: string;
   paid?: boolean;
