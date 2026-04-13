@@ -248,7 +248,7 @@ function LargeTextInput({
   placeholder?: string;
   optional?: boolean;
 }) {
-  const { isListening, isSupported, interimTranscript, toggleListening } = useVoiceInput({
+  const { isListening, isSupported, toggleListening } = useVoiceInput({
     onTranscript: (text) => onChange(value ? `${value} ${text}` : text),
     continuous: true,
   });
@@ -263,19 +263,11 @@ function LargeTextInput({
         className="w-full border border-[#e5e5e5] px-4 py-3 text-sm text-ink focus:outline-none focus:border-[#1a2e4a] transition-colors resize-none"
         style={{ borderRadius: "3px" }}
       />
-      {isListening && interimTranscript && (
-        <p className="text-xs text-[#6b7280] italic mt-1">{interimTranscript}</p>
-      )}
       <div className="flex items-center gap-3 mt-3">
         <button onClick={onSubmit} className="btn-primary text-sm py-2.5 px-5">
           {optional && !value ? "Hoppa över" : "Fortsätt"}
         </button>
-        <VoiceButton
-          isListening={isListening}
-          isSupported={isSupported}
-          onToggle={toggleListening}
-          interimTranscript=""
-        />
+        <VoiceButton isListening={isListening} isSupported={isSupported} onToggle={toggleListening} />
       </div>
     </div>
   );
@@ -292,7 +284,7 @@ function PersonalMessageInput({
   onSubmit: () => void;
   testatorName?: string;
 }) {
-  const { isListening, isSupported, interimTranscript, toggleListening } = useVoiceInput({
+  const { isListening, isSupported, toggleListening } = useVoiceInput({
     onTranscript: (text) => onChange(value ? `${value} ${text}` : text),
     continuous: true,
   });
@@ -304,12 +296,7 @@ function PersonalMessageInput({
           <span className="text-sm text-[#4a5568]">
             Prata direkt — det kan vara lättare än att skriva.
           </span>
-          <VoiceButton
-            isListening={isListening}
-            isSupported={isSupported}
-            onToggle={toggleListening}
-            interimTranscript=""
-          />
+          <VoiceButton isListening={isListening} isSupported={isSupported} onToggle={toggleListening} />
         </div>
       )}
       <textarea
@@ -321,9 +308,6 @@ function PersonalMessageInput({
         style={{ borderRadius: "3px" }}
         autoFocus
       />
-      {isListening && interimTranscript && (
-        <p className="text-sm text-[#6b7280] italic mt-2">{interimTranscript}</p>
-      )}
       <div className="flex items-center gap-3 mt-4">
         <button onClick={onSubmit} className="btn-primary py-3 px-6">
           {!value ? "Hoppa över" : "Jag är klar"}

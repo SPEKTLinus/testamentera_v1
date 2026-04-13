@@ -2,9 +2,6 @@
 
 import { useState } from "react";
 import type { Circumstances, WillType, FamilyStatus, ChildrenStatus, Asset, OutsideFamily } from "@/lib/types";
-import { VoiceButton } from "../VoiceButton";
-import { useVoiceInput } from "@/hooks/useVoiceInput";
-
 interface Props {
   circumstances: Circumstances;
   onUpdate: (c: Partial<Circumstances>, sub: number, total: number) => void;

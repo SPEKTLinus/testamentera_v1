@@ -10,7 +10,6 @@ interface UseVoiceInputOptions {
 export function useVoiceInput({ onTranscript, continuous = false }: UseVoiceInputOptions) {
   const [isListening, setIsListening] = useState(false);
   const [isSupported, setIsSupported] = useState(false);
-  const [interimTranscript, setInterimTranscript] = useState("");
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const recognitionRef = useRef<any>(null);
 
@@ -37,38 +36,30 @@ export function useVoiceInput({ onTranscript, continuous = false }: UseVoiceInpu
 
     recognition.onstart = () => {
       setIsListening(true);
-      setInterimTranscript("");
     };
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     recognition.onresult = (event: any) => {
-      let interim = "";
       let final = "";
 
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const transcript = event.results[i][0].transcript;
         if (event.results[i].isFinal) {
           final += transcript;
-        } else {
-          interim += transcript;
         }
       }
 
-      setInterimTranscript(interim);
       if (final) {
         onTranscript(final);
-        setInterimTranscript("");
       }
     };
 
     recognition.onerror = () => {
       setIsListening(false);
-      setInterimTranscript("");
     };
 
     recognition.onend = () => {
       setIsListening(false);
-      setInterimTranscript("");
     };
 
     recognitionRef.current = recognition;
@@ -81,7 +72,6 @@ export function useVoiceInput({ onTranscript, continuous = false }: UseVoiceInpu
       recognitionRef.current = null;
     }
     setIsListening(false);
-    setInterimTranscript("");
   }, []);
 
   const toggleListening = useCallback(() => {
@@ -95,7 +85,6 @@ export function useVoiceInput({ onTranscript, continuous = false }: UseVoiceInpu
   return {
     isListening,
     isSupported,
-    interimTranscript,
     startListening,
     stopListening,
     toggleListening,

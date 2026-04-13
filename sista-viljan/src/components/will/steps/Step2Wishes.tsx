@@ -246,7 +246,7 @@ function TextInput({
   optional?: boolean;
   submitLabel?: string;
 }) {
-  const { isListening, isSupported, interimTranscript, toggleListening } = useVoiceInput({
+  const { isListening, isSupported, toggleListening } = useVoiceInput({
     onTranscript: (text) => onChange(value ? `${value} ${text}` : text),
   });
 
@@ -280,19 +280,11 @@ function TextInput({
           autoFocus
         />
       )}
-      {isListening && interimTranscript && (
-        <p className="text-xs text-[#6b7280] italic mt-1">{interimTranscript}</p>
-      )}
       <div className="flex items-center gap-3 mt-3">
         <button onClick={onSubmit} className="btn-primary text-sm py-2.5 px-5">
           {optional && !value ? "Hoppa över" : submitLabel}
         </button>
-        <VoiceButton
-          isListening={isListening}
-          isSupported={isSupported}
-          onToggle={toggleListening}
-          interimTranscript=""
-        />
+        <VoiceButton isListening={isListening} isSupported={isSupported} onToggle={toggleListening} />
       </div>
     </div>
   );

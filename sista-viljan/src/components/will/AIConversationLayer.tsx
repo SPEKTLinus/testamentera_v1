@@ -40,8 +40,7 @@ export function AIConversationLayer({
   const { messages, isLoading, error, sendMessage, sendSystemPrompt } =
     useClaudeConversation(context);
 
-  const { isListening, isSupported, interimTranscript, toggleListening } =
-    useVoiceInput({
+  const { isListening, isSupported, toggleListening } = useVoiceInput({
       onTranscript: (text) => setInput((prev) => (prev ? `${prev} ${text}` : text)),
       continuous: true,
     });
@@ -133,9 +132,6 @@ export function AIConversationLayer({
       {/* Input area */}
       {!confirmed && (
         <div className="border-t border-[#e5e5e5] pt-4">
-          {isListening && interimTranscript && (
-            <p className="text-xs text-[#6b7280] italic mb-2">{interimTranscript}</p>
-          )}
           <div className="flex gap-2">
             <input
               type="text"
@@ -157,12 +153,7 @@ export function AIConversationLayer({
             </button>
           </div>
           <div className="mt-3">
-            <VoiceButton
-              isListening={isListening}
-              isSupported={isSupported}
-              onToggle={toggleListening}
-              interimTranscript=""
-            />
+            <VoiceButton isListening={isListening} isSupported={isSupported} onToggle={toggleListening} />
           </div>
         </div>
       )}

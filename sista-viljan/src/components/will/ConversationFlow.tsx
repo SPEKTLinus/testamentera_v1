@@ -251,11 +251,7 @@ export function ConversationFlow() {
               style={{ minHeight: `calc(100vh - ${MAIN_OFFSET})` }}
             >
               <div className="flex min-h-[calc(100vh-4rem)] flex-col lg:min-h-[calc(100vh-3.5rem)]">
-                <LetterChatPanel
-                  draft={draft}
-                  onDraftMerged={handleLetterChatMerged}
-                  onBackToDocuments={() => setSubPhase("documents")}
-                />
+                <LetterChatPanel draft={draft} onDraftMerged={handleLetterChatMerged} />
               </div>
             </div>
           ) : (

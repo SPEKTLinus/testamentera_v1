@@ -108,7 +108,7 @@ function FieldInput({
   placeholder?: string;
   pattern?: string;
 }) {
-  const { isListening, isSupported, interimTranscript, toggleListening } = useVoiceInput({
+  const { isListening, isSupported, toggleListening } = useVoiceInput({
     onTranscript: (text) => onChange(text),
   });
 
@@ -140,9 +140,6 @@ function FieldInput({
       {invalid && (
         <p className="text-xs text-red-500 mt-1">Kontrollera formatet och försök igen.</p>
       )}
-      {isListening && interimTranscript && (
-        <p className="text-xs text-[#6b7280] italic mt-1">{interimTranscript}</p>
-      )}
       <div className="flex items-center gap-3 mt-3">
         <button
           onClick={handleSubmit}
@@ -151,12 +148,7 @@ function FieldInput({
         >
           Fortsätt
         </button>
-        <VoiceButton
-          isListening={isListening}
-          isSupported={isSupported}
-          onToggle={toggleListening}
-          interimTranscript=""
-        />
+        <VoiceButton isListening={isListening} isSupported={isSupported} onToggle={toggleListening} />
       </div>
     </div>
   );

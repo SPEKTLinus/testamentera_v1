@@ -33,7 +33,7 @@ export function WillChatPanel({ draft, onDraftMerged, onContinueFromIntake }: Pr
 
   const intakeDone = isIntakeComplete(draft);
 
-  const { isListening, isSupported, interimTranscript, toggleListening } = useVoiceInput({
+  const { isListening, isSupported, toggleListening } = useVoiceInput({
     onTranscript: (text) => setInput((prev) => (prev ? `${prev} ${text}` : text)),
     continuous: true,
   });
@@ -187,9 +187,6 @@ export function WillChatPanel({ draft, onDraftMerged, onContinueFromIntake }: Pr
         </div>
 
         <div className="flex-shrink-0 border-t border-[#e5e5e5] bg-white px-4 py-3">
-          {isListening && interimTranscript && (
-            <p className="mb-2 text-xs italic text-[#6b7280]">{interimTranscript}</p>
-          )}
           <div className="flex items-end gap-2">
             <textarea
               value={input}

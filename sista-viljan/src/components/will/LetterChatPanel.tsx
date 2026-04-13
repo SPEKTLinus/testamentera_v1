@@ -15,7 +15,6 @@ interface ChatMessage {
 interface Props {
   draft: WillDraft;
   onDraftMerged: (merged: WillDraft) => void;
-  onBackToDocuments: () => void;
 }
 
 function mergeLetterIntoDraft(
@@ -40,7 +39,7 @@ function mergeLetterIntoDraft(
   return next;
 }
 
-export function LetterChatPanel({ draft, onDraftMerged, onBackToDocuments }: Props) {
+export function LetterChatPanel({ draft, onDraftMerged }: Props) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -52,7 +51,7 @@ export function LetterChatPanel({ draft, onDraftMerged, onBackToDocuments }: Pro
     draftRef.current = draft;
   }, [draft]);
 
-  const { isListening, isSupported, interimTranscript, toggleListening } = useVoiceInput({
+  const { isListening, isSupported, toggleListening } = useVoiceInput({
     onTranscript: (text) => setInput((prev) => (prev ? `${prev} ${text}` : text)),
     continuous: true,
   });
@@ -131,25 +130,16 @@ export function LetterChatPanel({ draft, onDraftMerged, onBackToDocuments }: Pro
     }
   };
 
-  const handleSaveAndLeave = () => {
-    onBackToDocuments();
-  };
-
   return (
     <div className="flex h-full min-h-0 w-full flex-col">
-      <div className="mb-4 flex flex-shrink-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <p className="label-overline mb-2">Personligt brev</p>
-          <h1 className="font-heading text-2xl font-semibold text-ink leading-tight md:text-3xl">
-            Skriv ditt brev till de du håller kär
-          </h1>
-          <p className="mt-2 max-w-xl text-sm leading-relaxed text-[#4a5568]">
-            Det här är inte juridik — bara dina ord. Will hjälper dig formulera.
-          </p>
-        </div>
-        <button type="button" onClick={handleSaveAndLeave} className="btn-secondary shrink-0 text-sm py-2.5 px-4">
-          Tillbaka till dokument
-        </button>
+      <div className="mb-4 flex-shrink-0">
+        <p className="label-overline mb-2">Personligt brev</p>
+        <h1 className="font-heading text-2xl font-semibold text-ink leading-tight md:text-3xl">
+          Skriv ditt brev till de du håller kär
+        </h1>
+        <p className="mt-2 max-w-xl text-sm leading-relaxed text-[#4a5568]">
+          Det här är inte juridik. Will lyssnar och gör bara lätta språkjusteringar — din röst och dina ord ska synas.
+        </p>
       </div>
 
       <div
@@ -184,7 +174,7 @@ export function LetterChatPanel({ draft, onDraftMerged, onBackToDocuments }: Pro
           ))}
           {isLoading && (
             <div className="flex items-center gap-2 px-1 text-sm text-[#6b7280]">
-                           <span className="inline-flex gap-1">
+              <span className="inline-flex gap-1">
                 <span
                   className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#9ca3af]"
                   style={{ animationDelay: "0ms" }}
@@ -213,14 +203,6 @@ export function LetterChatPanel({ draft, onDraftMerged, onBackToDocuments }: Pro
         </div>
 
         <div className="flex-shrink-0 border-t border-[#e5e5e5] bg-white px-4 py-3">
-          {isListening && interimTranscript && (
-            <p className="mb-2 text-xs italic text-[#6b7280]">{interimTranscript}</p>
-          )}
-          <div className="mb-3 flex flex-wrap gap-2">
-            <button type="button" onClick={handleSaveAndLeave} className="text-xs text-[#1a2e4a] underline underline-offset-2">
-              Spara och gå tillbaka till dokument
-            </button>
-          </div>
           <div className="flex items-end gap-2">
             <textarea
               value={input}
