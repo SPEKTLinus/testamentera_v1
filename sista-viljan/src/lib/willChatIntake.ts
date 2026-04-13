@@ -1,4 +1,4 @@
-import type { Circumstances, WillDraft } from "./types";
+import type { Circumstances, FuneralWishes, WillDraft } from "./types";
 
 const PN_REGEX = /^\d{8}-\d{4}$/;
 
@@ -135,6 +135,94 @@ function isOutsideFamily(v: unknown): v is Circumstances["outsideFamily"] {
   return v === "person" || v === "charity" || v === "none";
 }
 
+/** Mappar modellens fria strängar / synonymer till enum (många svar är på svenska). */
+function coerceBurialForm(v: unknown): FuneralWishes["burialForm"] | undefined {
+  if (v === "burial" || v === "cremation" || v === "no_preference") return v;
+  if (typeof v !== "string") return undefined;
+  const t = v.toLowerCase().trim();
+  if (t.includes("krem") || t.includes("aska") || t.includes("stoft") || t.includes("cremat")) {
+    return "cremation";
+  }
+  if (
+    t.includes("ingen åsikt") ||
+    t.includes("inget särskilt") ||
+    t.includes("spelar ingen roll") ||
+    t.includes("no_preference")
+  ) {
+    return "no_preference";
+  }
+  if (
+    t.includes("jordbegravning") ||
+    t.includes("kista") ||
+    t.includes("gravsättning") ||
+    t.includes("kyrkogård") ||
+    (t.includes("begravning") && !t.includes("borgerlig")) ||
+    t === "burial"
+  ) {
+    return "burial";
+  }
+  return undefined;
+}
+
+function coerceCeremony(v: unknown): FuneralWishes["ceremony"] | undefined {
+  if (v === "religious" || v === "civil" || v === "own") return v;
+  if (typeof v !== "string") return undefined;
+  const t = v.toLowerCase().trim();
+  if (
+    t === "religious" ||
+    t.includes("religiös") ||
+    t.includes("religios") ||
+    t.includes("kyrklig") ||
+    t.includes("kyrkan") ||
+    t.includes(" i kyrk") ||
+    t.includes("präst") ||
+    t.includes("pastor") ||
+    t.includes("gudstjänst") ||
+    t.includes("kyrkobegravning") ||
+    (t.includes("traditionell") && t.includes("kyrk"))
+  ) {
+    return "religious";
+  }
+  if (t.includes("borgerlig") || t === "civil" || t.includes("civil ceremoni")) {
+    return "civil";
+  }
+  if (
+    t === "own" ||
+    t.includes("egen ceremoni") ||
+    (t.includes("egen") && t.includes("ceremoni")) ||
+    (t.includes("personlig") && t.includes("ceremoni"))
+  ) {
+    return "own";
+  }
+  return undefined;
+}
+
+function inferFuneralEnumsFromFreeText(fw: FuneralWishes): FuneralWishes {
+  const hint = [fw.location, fw.personalMessage].filter(Boolean).join(" ");
+  const out = { ...fw };
+  if (!out.ceremony) {
+    const inf = coerceCeremony(hint);
+    if (inf) out.ceremony = inf;
+  }
+  if (!out.burialForm) {
+    const inf = coerceBurialForm(hint);
+    if (inf) out.burialForm = inf;
+  }
+  return out;
+}
+
+/** Efter laddning från localStorage: fyll ceremony/burialForm om plats/meddelande redan innehåller ledtrådar. */
+export function backfillFuneralWishesFromDraftText(draft: WillDraft): WillDraft {
+  const fw = inferFuneralEnumsFromFreeText(draft.funeralWishes);
+  if (
+    fw.ceremony === draft.funeralWishes.ceremony &&
+    fw.burialForm === draft.funeralWishes.burialForm
+  ) {
+    return draft;
+  }
+  return { ...draft, funeralWishes: fw };
+}
+
 /** Normalizes and merges one model extraction turn into the draft */
 export function mergeWillChatExtraction(
   draft: WillDraft,
@@ -193,15 +281,18 @@ export function mergeWillChatExtraction(
     }
   }
 
+  const topBurial = coerceBurialForm(raw.burialForm);
+  if (topBurial) next.funeralWishes.burialForm = topBurial;
+  const topCeremony = coerceCeremony(raw.ceremony);
+  if (topCeremony) next.funeralWishes.ceremony = topCeremony;
+
   const f = raw.funeralWishes;
   if (f && typeof f === "object" && !Array.isArray(f)) {
     const o = f as Record<string, unknown>;
-    if (o.burialForm === "burial" || o.burialForm === "cremation" || o.burialForm === "no_preference") {
-      next.funeralWishes.burialForm = o.burialForm;
-    }
-    if (o.ceremony === "religious" || o.ceremony === "civil" || o.ceremony === "own") {
-      next.funeralWishes.ceremony = o.ceremony;
-    }
+    const burial = coerceBurialForm(o.burialForm);
+    if (burial) next.funeralWishes.burialForm = burial;
+    const ceremony = coerceCeremony(o.ceremony);
+    if (ceremony) next.funeralWishes.ceremony = ceremony;
     if (typeof o.music === "string") next.funeralWishes.music = o.music;
     if (typeof o.clothing === "string") next.funeralWishes.clothing = o.clothing;
     if (o.flowersOrCharity === "flowers" || o.flowersOrCharity === "charity" || o.flowersOrCharity === "charity_name") {
@@ -212,6 +303,8 @@ export function mergeWillChatExtraction(
     if (typeof o.location === "string") next.funeralWishes.location = o.location;
     if (typeof o.personalMessage === "string") next.funeralWishes.personalMessage = o.personalMessage;
   }
+
+  next.funeralWishes = inferFuneralEnumsFromFreeText(next.funeralWishes);
 
   if (raw.intakeComplete === true || raw.intakeComplete === "true") {
     next.intakeMarkedComplete = true;

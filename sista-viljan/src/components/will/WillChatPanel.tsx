@@ -219,7 +219,7 @@ export function WillChatPanel({ draft, onDraftMerged, onContinueFromIntake }: Pr
                 disabled={!draft.paid && !canProceedToPayment}
                 className="btn-primary shrink-0 px-6 py-3 text-sm whitespace-nowrap disabled:pointer-events-none disabled:opacity-45"
               >
-                {draft.paid ? "Öppna dokument" : "Gå vidare till betalning"}
+                {draft.paid ? "Öppna dokument" : "Gå vidare"}
               </button>
             </div>
           </div>

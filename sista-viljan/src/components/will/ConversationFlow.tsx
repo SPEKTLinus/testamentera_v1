@@ -23,6 +23,7 @@ import {
   getIntakeStage,
   migrateWillDraft,
   isIntakeComplete,
+  backfillFuneralWishesFromDraftText,
 } from "@/lib/willChatIntake";
 
 const MAIN_OFFSET = "3.5rem"; /* h-14 header */
@@ -79,9 +80,9 @@ export function ConversationFlow() {
     const saved = loadLocalDraftForPhone(sess.normalized);
     if (saved) {
       const migrated = migrateWillDraft(saved);
-      let toShow = migrated;
-      if (migrated !== saved) {
-        saveLocalDraft(migrated);
+      let toShow = backfillFuneralWishesFromDraftText(migrated);
+      if (migrated !== saved || toShow !== migrated) {
+        saveLocalDraft(toShow);
       }
       if (sessToken && !toShow.willAccessToken && toShow.verifiedPhone === sess.normalized) {
         toShow = { ...toShow, willAccessToken: sessToken };

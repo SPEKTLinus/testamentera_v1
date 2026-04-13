@@ -54,6 +54,13 @@ wishes.heirIsPrivateProperty: boolean (om huvudarvtagaren ska få som enskild eg
 wishes.partnerCanStay: boolean — bara relevant om användaren är gift/sambo OCH har särkullbarn eller både gemensamma och tidigare barn. Fråga annars inte.
 wishes.charityName / wishes.charityAmount: om outsideFamily är "charity"
 
+funeralWishes.burialForm: "burial" | "cremation" | "no_preference"
+funeralWishes.ceremony: "religious" | "civil" | "own"
+ — religious om användaren vill ha kyrklig/traditionell gudstjänst, präst, eller uttryckligen begravning i kyrkan
+ — civil vid borgerlig ceremoni
+ — own vid tydligt personlig/egen ceremoni utan kyrklig eller borgerlig ordning
+Vid fraser som "traditionell begravning i kyrkan": sätt minst ceremony till "religious"; burialForm oftast "burial" om det handlar om kista/jordbegravning (inte kremering).
+
 Personnummer ska normaliseras till formatet YYYYMMDD-XXXX när du sparar i JSON.
 
 Ordning att fylla i (hoppa över det som redan finns i "Nuvarande utkast"):
@@ -67,11 +74,11 @@ Efter varje användarsvar: lägg ALLTID till ett block sist i svaret (användare
 <extracted_data>
 { "testatorName": "...", "circumstances": { ... }, "wishes": { ... }, "funeralWishes": { ... } }
 </extracted_data>
-Inkludera ENDAST fält du faktiskt kan fylla i från senaste svaret (partiell uppdatering). Använd exakta enum-strängar.
+Inkludera ENDAST fält du faktiskt kan fylla i från senaste svaret (partiell uppdatering). Använd exakta enum-strängar för alla kodade fält (bl.a. funeralWishes.burialForm och funeralWishes.ceremony — aldrig svenska ord där).
 Om inget nytt går att utläsa: <extracted_data>{}</extracted_data>
 
 När ALLT enligt listan är komplett i utkastet (efter din tolkning av senaste svaret), sätt i JSON: "intakeComplete": true (booleansk) tillsammans med sista fälten.
-Om du i synlig text säger att insamlingen är klar / ni är färdiga: du MÅSTE i samma svar sätta "intakeComplete": true i <extracted_data>, annars kan användaren inte gå vidare till betalning.`;
+Om du i synlig text säger att insamlingen är klar / ni är färdiga: du MÅSTE i samma svar sätta "intakeComplete": true i <extracted_data>, annars kan användaren inte gå vidare.`;
 
 function stripExtracted(text: string): { display: string; data: Record<string, unknown> | null } {
   const extractedMatch = text.match(/<extracted_data>\s*([\s\S]*?)\s*<\/extracted_data>/);
