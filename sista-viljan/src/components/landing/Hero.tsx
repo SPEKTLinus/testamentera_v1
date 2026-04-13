@@ -12,12 +12,17 @@ export function Hero() {
           <span className="italic font-normal">Inte gissningar.</span>
         </h1>
 
-        <p className="text-lg text-[#4a5568] max-w-xl leading-relaxed mb-12">
-          När du inte längre finns här ska ingen behöva undra vad du ville — eller bråka om tolkningen. Ett testamente
-          sätter ord på dina önskemål så de kvarvarande kan ägna sig åt varandra i stället för konflikt. Många skjuter
-          på det i vardagen; nu när du redan är här kan du få det gjort tydligt och utan krångel. Vi påminner dig sedan
-          löpande om att se över testamentet när livet förändras.
-        </p>
+        <div className="text-lg text-[#4a5568] max-w-xl leading-relaxed mb-12 space-y-4">
+          <p>
+            Många skjuter upp att skriva testamente – inte för att det är oviktigt, utan för att det sällan blir av i
+            vardagen. Men ett testamente gör stor skillnad: det tydliggör dina önskemål och hjälper dina närstående att
+            fokusera på varandra i stället för att hamna i osäkerhet eller konflikt.
+          </p>
+          <p>
+            Hos Sista Viljan kan du enkelt få det på plats, tydligt och utan krångel. Och eftersom livet förändras, får
+            du löpande påminnelser om att se över och uppdatera testamentet när det behövs.
+          </p>
+        </div>
 
         <div className="flex flex-col sm:flex-row gap-4 items-start mb-20">
           <Link href="/app" className="btn-primary">
