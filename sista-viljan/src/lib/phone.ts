@@ -3,8 +3,11 @@ export function cleanPhoneDigits(input: string): string {
   return input.replace(/\D/g, "");
 }
 
+/**
+ * Lokalt: 07XXXXXXXX (10 siffror). E.164 utan +: 46 + 9 siffror (t.ex. 46701234567) — inte 12 tecken.
+ */
 export function isValidSwedishMobile(digits: string): boolean {
-  return /^(07[0-9]{8}|467[0-9]{9})$/.test(digits);
+  return /^(07[0-9]{8}|467[0-9]{8})$/.test(digits);
 }
 
 /** Returns E.164 digits without +, e.g. 46701234567 */
