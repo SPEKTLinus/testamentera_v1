@@ -12,6 +12,15 @@ import {
 } from "@/lib/willChatIntake";
 import { renderAssistantMarkdown } from "@/lib/chatAssistantRichText";
 
+function isFreshWillChatDraft(d: WillDraft): boolean {
+  return (
+    !d.testatorName?.trim() &&
+    !d.testatorAddress?.trim() &&
+    !(d.circumstances.willForm || d.circumstances.willType) &&
+    !d.wishes.mainHeir?.trim()
+  );
+}
+
 type Role = "user" | "assistant";
 
 interface ChatMessage {
@@ -37,6 +46,16 @@ export function WillChatPanel({ draft, onDraftMerged, onContinueFromIntake }: Pr
   useLayoutEffect(() => {
     draftRef.current = draft;
   }, [draft]);
+
+  /** Äldre utkast med data men utan intakeStyle: kör som guidat (neutral öppning används inte). */
+  useLayoutEffect(() => {
+    if (!draft.verifiedPhone?.trim()) return;
+    if (draft.intakeStyle) return;
+    if (isFreshWillChatDraft(draft)) return;
+    const next: WillDraft = { ...draftRef.current, intakeStyle: "guided" };
+    draftRef.current = next;
+    onDraftMerged(next);
+  }, [draft, onDraftMerged]);
 
   const intakeDone = isIntakeComplete(draft);
   const showContinueCta = shouldShowIntakeContinueCta(draft);
@@ -241,7 +260,7 @@ export function WillChatPanel({ draft, onDraftMerged, onContinueFromIntake }: Pr
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Skriv ditt svar här…"
+              placeholder="Skriv ditt svar här — kort eller längre, precis som det känns rätt…"
               disabled={isLoading}
               rows={2}
               className="min-h-[42px] flex-1 resize-none border border-[#e5e5e5] px-3 py-2.5 text-sm text-ink transition-colors focus:border-[#1a2e4a] focus:outline-none disabled:opacity-50"

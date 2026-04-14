@@ -29,8 +29,25 @@ function getAnthropic(): Anthropic {
   return new Anthropic({ apiKey: key });
 }
 
-const BOOTSTRAP_USER =
-  "[Internt: Samtalet startar nu. Svara som Will med en varm, lugnt genomarbetad hälsning (gärna 2–4 meningar: välkommen, att du finns med dem i något viktigt, att ni tar det i deras takt — utan utfyllnad). Ställ sedan din första fråga. Följ datainsamlingsordningen — börja med det som fortfarande saknas högst upp i listan.]";
+/** Första mötet — neutral, premium välkomst; inget val av "läge" i synlig text. */
+const BOOTSTRAP_OPENING = `[Internt: Första mötet. Du är Will. Leverera en **utmärkt** välkomsthälsning på svenska som känns mänsklig och värdig — inte säljigt, inte robotaktigt.
+
+Krav på öppningen:
+- **3–5 meningar** med lugn värme och tyngd; visa att du förstår att detta är stort för personen.
+- **Neutral ingång:** be dem INTE välja mellan "lägen", metoder eller tekniska alternativ. Nämn inte friform vs steg-för-steg.
+- Bjud in till att börja **där det känns naturligt**: en tanke, en oro, en önskan, eller en längre berättelse om de föredrar det — allt är okej.
+- **Max en** mjuk ingång i slutet (t.ex. vad som känns viktigast att få sagt först) — **ingen** lång punktlista med många frågor, ingen interrogation.
+- Om utkast-JSON redan innehåller ifyllda fält: erkänn det kort ("jag ser att en del redan finns här") och bjud in att bygga vidare — fortfarande neutralt.
+- Synlig text ska kunna stå ensam som en riktigt bra första kontakt.
+
+extracted_data i detta första svar: bara om något går att utläsa från tom start — annars tom objekt {}.]`;
+
+const BOOTSTRAP_RESUME_GUIDED = `[Internt: Användaren är tillbaka med utkast som redan innehåller uppgifter. Hälsa varmt men **kort** (2–3 meningar). Bekräfta i naturlig språk att du ser vad som redan står i underlaget. Ställ **en** tydlig, konkret fråga om nästa saknade punkt enligt beslutsträdet och utkast-JSON — ingen ny lång generisk välkomstceremoni.]`;
+
+const BOOTSTRAP_FREEFORM_CONTINUE = `[Internt: Läget är friform. Användaren har precis valt / klassificerats till att berätta mer samlat. Om detta är första svaret efter klassificering: bekräfta kort, fyll extracted_data maximalt från hela användartexten, håll synlig uppföljning till **helst en** samlad fråga för luckor.]`;
+
+const CONTINUE_PRIMER =
+  "[Internt: Du är Will. Fortsätt samtalet utifrån historiken ovan och utkast-JSON. Följ instruktionerna — upprepa inte välkomst- eller öppningsinstruktioner.]";
 
 const WILL_CHAT_SYSTEM = `Du heter Will och leder ett strukturerat men mänskligt samtal på svenska för att samla in all information som behövs för att skriva ett testamente samt begravningsönskemål (dessa används som underlag i tjänsten). Ett separat personligt brev till anhöriga är en egen tilläggstjänst — nämn det inte som del av detta samtal. Presentera dig inte som "AI" eller "assistent" om det inte behövs — du är Will.
 
@@ -110,8 +127,17 @@ Inkludera ENDAST fält du faktiskt kan fylla i från senaste svaret (partiell up
 **Begravning / ceremoni:** Om användaren nämner musik, låtar, artister, tal, talare, blommor, välgörenhet, plats eller liknande — spara det **alltid** i lämpligt fält under funeralWishes (music, speakers, flowersOrCharity, charityName, location, personalMessage m.m.), även om tonen är lättsam eller skämtsam. Verkliga önskemål och skämt kan samexistera: få med användarens ord i fritextfälten så inget "glöms" i underlaget.
 Om inget nytt går att utläsa: <extracted_data>{}</extracted_data>
 
+När utkastet **ännu saknar** intakeStyle och användaren precis skrivit sitt **första** svar: du **måste** i samma svar sätta exakt en av:
+  "intakeStyle": "freeform"  eller  "intakeStyle": "guided"
+enligt tillägget KLASSIFICERING (det skickas med av servern när det behövs). Utan detta kan inte tjänsten anpassa sig.
+
 När ALLT enligt listan är komplett i utkastet (efter din tolkning av senaste svaret), sätt i JSON: "intakeComplete": true (booleansk) tillsammans med sista fälten.
-Om du i synlig text säger att insamlingen är klar / ni är färdiga: du MÅSTE i samma svar sätta "intakeComplete": true i <extracted_data>, annars kan användaren inte gå vidare.`;
+Om du i synlig text säger att insamlingen är klar / ni är färdiga: du MÅSTE i samma svar sätta "intakeComplete": true i <extracted_data>, annars kan användaren inte gå vidare.
+
+LÄGE — FRIFORM (endast när utkastets intakeStyle är freeform)
+- När användaren gett en samlad berättelse: tolka **hela** texten med utkast-JSON; fyll **extracted_data** med så mycket som möjligt i **ett** svar.
+- I synlig text: kort bekräftelse (2–5 meningar), sedan **helst en samlad** uppföljningsfråga för luckor — undvik långa punktlistor direkt efter första långa inlägget.
+- I senare varv: som vanligt enligt beslutsträdet.`;
 
 function stripExtracted(text: string): { display: string; data: Record<string, unknown> | null } {
   const extractedMatch = text.match(/<extracted_data>\s*([\s\S]*?)\s*<\/extracted_data>/);
@@ -130,15 +156,74 @@ function stripExtracted(text: string): { display: string; data: Record<string, u
 
 type ChatMessage = { role: "user" | "assistant"; content: string };
 
-function toAnthropicMessages(uiMessages: ChatMessage[]): ChatMessage[] {
+type IntakePhase = "opening" | "auto" | "guided" | "freeform";
+
+function countUserMessages(messages: ChatMessage[]): number {
+  return messages.filter((m) => m.role === "user").length;
+}
+
+function hasDraftProgress(d: WillDraft): boolean {
+  return !!(
+    d.testatorName?.trim() ||
+    d.testatorAddress?.trim() ||
+    d.circumstances.willForm ||
+    d.circumstances.willType ||
+    d.wishes.mainHeir?.trim()
+  );
+}
+
+function resolveIntakePhase(draft: WillDraft, clippedUi: ChatMessage[]): IntakePhase {
+  if (draft.intakeStyle === "freeform") return "freeform";
+  if (draft.intakeStyle === "guided") return "guided";
+  if (countUserMessages(clippedUi) === 0) return "opening";
+  return "auto";
+}
+
+function bootstrapUserMessageForEmptyThread(phase: IntakePhase, draft: WillDraft): string {
+  if (phase === "opening") return BOOTSTRAP_OPENING;
+  if (phase === "freeform") return BOOTSTRAP_FREEFORM_CONTINUE;
+  if (phase === "guided" && hasDraftProgress(draft)) return BOOTSTRAP_RESUME_GUIDED;
+  return BOOTSTRAP_OPENING;
+}
+
+function toAnthropicMessages(
+  uiMessages: ChatMessage[],
+  phase: IntakePhase,
+  draft: WillDraft
+): ChatMessage[] {
   if (uiMessages.length === 0) {
-    return [{ role: "user", content: BOOTSTRAP_USER }];
+    return [{ role: "user", content: bootstrapUserMessageForEmptyThread(phase, draft) }];
   }
   const first = uiMessages[0];
   if (first.role === "assistant") {
-    return [{ role: "user", content: BOOTSTRAP_USER }, ...uiMessages];
+    return [{ role: "user", content: CONTINUE_PRIMER }, ...uiMessages];
   }
   return uiMessages;
+}
+
+function buildPhaseSystemAppendix(phase: IntakePhase): string {
+  const parts: string[] = [];
+  if (phase === "opening") {
+    parts.push(`
+**Aktiv fas: ÖPPNING** — följ endast öppningsinstruktionen i det dolda användarmeddelandet. Ingen klassificering ännu.`);
+  }
+  if (phase === "auto") {
+    parts.push(`
+**KLASSIFICERING (internt)** — Utkastets intakeStyle saknas ännu. Användaren har skrivit sitt **första** svar. Tolka detta svar:
+- Sätt **"intakeStyle": "freeform"** om de skriver utförligt, många detaljer, flera ämnesområden (arv, familj, begravning) i ett svep, längre berättande, eller uttryckligen vill få ur sig allt i en text.
+- Sätt **"intakeStyle": "guided"** om svaret är kort, allmänt, vagt ("vet inte", "var börjar man"), bara hälsning, eller de uttryckligen vill ha ledning fråga för fråga.
+
+Du **måste** inkludera exakt en av dessa strängar i <extracted_data>.
+
+Därefter i **samma** svar:
+- Om **freeform**: fyll övriga fält i extracted_data maximalt från **hela** användartexten; synlig text kort (2–5 meningar) + **helst en** samlad uppföljningsfråga för luckor (se LÄGE — FRIFORM).
+- Om **guided**: extrahera vad som går från svaret; ställ **en** tydlig nästa fråga enligt beslutsträdet (första saknade punkt i ordningen).`);
+  }
+  if (phase === "freeform") {
+    parts.push(`
+**Aktivt läge:** FRIFORM — följ LÄGE — FRIFORM i instruktionerna ovan.`);
+  }
+  return parts.join("");
 }
 
 export async function POST(req: NextRequest) {
@@ -189,11 +274,17 @@ export async function POST(req: NextRequest) {
       specialTrusteeName: draft.specialTrusteeName,
       wishes: draft.wishes,
       funeralWishes: draft.funeralWishes,
+      intakeStyle: draft.intakeStyle ?? null,
+      intakeStyleHint:
+        draft.intakeStyle == null
+          ? "Saknas tills första användarsvaret har klassificerats (guided = fråga för fråga; freeform = samla berättelse och fylla luckor effektivt)."
+          : undefined,
       intakeMarkedComplete: draft.intakeMarkedComplete,
       intakeCompleteHint: draft.intakeMarkedComplete === true ? "Användaren har markerat insamling klar." : undefined,
     };
 
     const { clipped: clippedUi, didClip } = clipWillChatUiMessages(uiMessages);
+    const phase = resolveIntakePhase(draft, clippedUi);
 
     let contextBlock = `Nuvarande utkast (JSON — använd detta för att se vad som redan är ifyllt och vad som saknas; det är sanningen om underlaget, inte chatthistoriken):\n${JSON.stringify(
       contextPayload,
@@ -219,7 +310,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const system = `${WILL_CHAT_SYSTEM}\n\n${contextBlock}${sessionGuidance}`;
+    const system = `${WILL_CHAT_SYSTEM}${buildPhaseSystemAppendix(phase)}\n\n${contextBlock}${sessionGuidance}`;
 
     const maxTokens = capOutputBudget(draft, 2048);
     if (maxTokens <= 0) {
@@ -236,7 +327,7 @@ export async function POST(req: NextRequest) {
       model: "claude-sonnet-4-20250514",
       max_tokens: maxTokens,
       system,
-      messages: toAnthropicMessages(clippedUi) as Anthropic.MessageCreateParams["messages"],
+      messages: toAnthropicMessages(clippedUi, phase, draft) as Anthropic.MessageCreateParams["messages"],
     });
 
     const inTok = response.usage?.input_tokens ?? 0;
@@ -263,9 +354,24 @@ export async function POST(req: NextRequest) {
 
     const { display, data } = stripExtracted(content.text);
 
+    let extractedData = data;
+    if (
+      phase === "auto" &&
+      extractedData &&
+      draft.intakeStyle == null &&
+      extractedData.intakeStyle == null
+    ) {
+      const lastUser = [...clippedUi].reverse().find((m) => m.role === "user");
+      const t = typeof lastUser?.content === "string" ? lastUser.content.trim() : "";
+      const sentences = t.split(/[.!?]+\s+/).filter((s) => s.length > 0).length;
+      const style: "freeform" | "guided" =
+        t.length > 400 || sentences >= 4 ? "freeform" : "guided";
+      extractedData = { ...extractedData, intakeStyle: style };
+    }
+
     return NextResponse.json({
       text: display,
-      extractedData: data,
+      extractedData,
       aiTokenUsage: newUsage,
       willChatSessionTokens,
     });

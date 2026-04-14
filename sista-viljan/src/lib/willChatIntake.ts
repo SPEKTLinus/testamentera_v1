@@ -296,6 +296,10 @@ export function mergeWillChatExtraction(
     funeralWishes: { ...draft.funeralWishes },
   };
 
+  if (raw.intakeStyle === "guided" || raw.intakeStyle === "freeform") {
+    next.intakeStyle = raw.intakeStyle;
+  }
+
   if (typeof raw.testatorName === "string") next.testatorName = raw.testatorName;
   if (typeof raw.testatorPersonalNumber === "string") {
     next.testatorPersonalNumber = raw.testatorPersonalNumber.replace(/\s/g, "");
