@@ -94,11 +94,16 @@ export interface WillAiTokenUsage {
   outputTokens: number;
 }
 
+/** Hur will-chat samlar in: guidade frågor eller fri berättelse först (fyller luckor efteråt). */
+export type WillIntakeStyle = "guided" | "freeform";
+
 export interface WillDraft {
   id?: string;
   userId?: string;
   /** E.164 digits (no +), set after start gate — used for Swish prefills and abuse limits */
   verifiedPhone?: string;
+  /** Valt insamlingsläge i chatten (styrs bootstrap + systembilaga). */
+  intakeStyle?: WillIntakeStyle;
   /** E-post från startgrinden — kvitto via Resend, påminnelser m.m. */
   contactEmail?: string;
   /** Bearer-token från /api/start-will när WILL_ACCESS_SECRET är satt (skyddar AI-routes). */
