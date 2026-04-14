@@ -69,6 +69,8 @@ export function WillChatPanel({ draft, onDraftMerged, onContinueFromIntake }: Pr
           text?: string;
           extractedData?: Record<string, unknown> | null;
           aiTokenUsage?: WillAiTokenUsage;
+          willChatSessionTokens?: number;
+          sessionCapReached?: boolean;
           error?: string;
         };
         if (!res.ok) {
@@ -82,10 +84,13 @@ export function WillChatPanel({ draft, onDraftMerged, onContinueFromIntake }: Pr
           draftRef.current,
           payload.extractedData ?? null
         );
-        const merged: WillDraft =
+        let merged: WillDraft =
           payload.aiTokenUsage != null
             ? { ...mergedBase, aiTokenUsage: payload.aiTokenUsage }
             : mergedBase;
+        if (typeof payload.willChatSessionTokens === "number") {
+          merged = { ...merged, willChatSessionTokens: payload.willChatSessionTokens };
+        }
         draftRef.current = merged;
         onDraftMerged(merged);
         return payload.text ?? null;
@@ -145,6 +150,10 @@ export function WillChatPanel({ draft, onDraftMerged, onContinueFromIntake }: Pr
         <h1 className="font-heading text-2xl font-semibold text-ink leading-tight md:text-3xl">
           Skriv ditt testamente tillsammans med Will
         </h1>
+        <p className="mt-3 max-w-2xl text-xs leading-relaxed text-[#6b7280]">
+          Sista Viljan är ett verktyg — inte juridisk rådgivning. Vid komplexa eller oklara lägen bör en jurist granska
+          helheten.
+        </p>
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col border border-[#e5e5e5] bg-[#fafafa]"

@@ -1,13 +1,58 @@
-import type { Circumstances, FuneralWishes, WillDraft } from "./types";
+import type {
+  ChildEntry,
+  Circumstances,
+  FuneralWishes,
+  InheritanceDistribution,
+  NonChildBeneficiary,
+  WillDraft,
+} from "./types";
+import {
+  collectIntakeGaps,
+  getIntakeProgressApprox,
+  isIntakeCompleteByTree,
+  needsInheritanceDistributionQuestion,
+} from "./intakeDecisionTree";
 
-const PN_REGEX = /^\d{8}-\d{4}$/;
+const LEGACY_PN = /^\d{8}-\d{4}$/;
 
 /** Migration: tidigare ingick brev i samma köp om wantsPersonalLetter var true. */
 export function migrateWillDraft(draft: WillDraft): WillDraft {
-  if (draft.paid && draft.wantsPersonalLetter === true && !draft.paidLetter) {
-    return { ...draft, paidLetter: true };
+  let next: WillDraft = { ...draft };
+  if (next.paid && next.wantsPersonalLetter === true && !next.paidLetter) {
+    next = { ...next, paidLetter: true };
   }
-  return draft;
+
+  const legacyShapeComplete =
+    !!next.testatorName?.trim() &&
+    !!next.testatorPersonalNumber?.trim() &&
+    LEGACY_PN.test(next.testatorPersonalNumber.trim()) &&
+    !!next.testatorAddress?.trim() &&
+    !!next.circumstances.willType &&
+    !next.circumstances.willForm &&
+    !!next.circumstances.familyStatus &&
+    !!next.circumstances.childrenStatus &&
+    Array.isArray(next.circumstances.assets) &&
+    next.circumstances.assets.length > 0 &&
+    !!next.circumstances.outsideFamily &&
+    !!next.wishes.mainHeir?.trim() &&
+    typeof next.wishes.heirIsPrivateProperty === "boolean" &&
+    !!next.wishes.executor?.trim() &&
+    !!next.funeralWishes.burialForm &&
+    !!next.funeralWishes.ceremony;
+
+  if (legacyShapeComplete) {
+    if (typeof next.previousWillsExist !== "boolean") {
+      next = { ...next, previousWillsExist: false };
+    }
+    if (typeof next.minorBeneficiaries !== "boolean") {
+      next = { ...next, minorBeneficiaries: false };
+    }
+    if (needsInheritanceDistributionQuestion(next) && !next.inheritanceDistribution) {
+      next = { ...next, inheritanceDistribution: "equal" };
+    }
+  }
+
+  return next;
 }
 
 export function needsPartnerStayQuestion(draft: WillDraft): boolean {
@@ -22,49 +67,17 @@ export function needsCharityWishes(draft: WillDraft): boolean {
   return draft.circumstances.outsideFamily === "charity";
 }
 
-const INTAKE_CHECK_DEFS: ReadonlyArray<{ label: string; ok: (d: WillDraft) => boolean }> = [
-  { label: "Ditt namn", ok: (d) => !!d.testatorName?.trim() },
-  {
-    label: "Personnummer (ååååmmdd-xxxx)",
-    ok: (d) => !!d.testatorPersonalNumber?.trim() && PN_REGEX.test(d.testatorPersonalNumber.trim()),
-  },
-  { label: "Adress", ok: (d) => !!d.testatorAddress?.trim() },
-  { label: "Testamentestyp (eget eller gemensamt)", ok: (d) => !!d.circumstances.willType },
-  { label: "Familjesituation", ok: (d) => !!d.circumstances.familyStatus },
-  { label: "Barn / särkullbarn", ok: (d) => !!d.circumstances.childrenStatus },
-  { label: "Tillgångar (minst ett val)", ok: (d) => Array.isArray(d.circumstances.assets) && (d.circumstances.assets?.length ?? 0) > 0 },
-  { label: "Arv utanför familjen", ok: (d) => !!d.circumstances.outsideFamily },
-  { label: "Huvudarvinge", ok: (d) => !!d.wishes.mainHeir?.trim() },
-  {
-    label: "Om bostaden är särskild egendom (ja/nej)",
-    ok: (d) => typeof d.wishes.heirIsPrivateProperty === "boolean",
-  },
-  {
-    label: "Sambo får bo kvar (ja/nej)",
-    ok: (d) => (needsPartnerStayQuestion(d) ? typeof d.wishes.partnerCanStay === "boolean" : true),
-  },
-  {
-    label: "Välgörenhetsorganisation",
-    ok: (d) => (needsCharityWishes(d) ? !!d.wishes.charityName?.trim() : true),
-  },
-  { label: "Bouppteckningsförrättare / testamentsexekutor", ok: (d) => !!d.wishes.executor?.trim() },
-  { label: "Begravningsform", ok: (d) => !!d.funeralWishes.burialForm },
-  { label: "Ceremoni", ok: (d) => !!d.funeralWishes.ceremony },
-];
-
 export function isIntakeComplete(draft: WillDraft): boolean {
-  return INTAKE_CHECK_DEFS.every((x) => x.ok(draft));
+  return isIntakeCompleteByTree(draft);
 }
 
 /** Korta svenska rubriker för det som saknas (betalningsgrind). */
 export function getIntakeIncompleteSummaries(draft: WillDraft): string[] {
-  return INTAKE_CHECK_DEFS.filter((x) => !x.ok(draft)).map((x) => x.label);
+  return collectIntakeGaps(draft);
 }
 
 export function getIntakeProgressPercent(draft: WillDraft): number {
-  const done = INTAKE_CHECK_DEFS.filter((x) => x.ok(draft)).length;
-  if (done === INTAKE_CHECK_DEFS.length) return 100;
-  return Math.min(95, Math.round((done / INTAKE_CHECK_DEFS.length) * 95));
+  return getIntakeProgressApprox(draft);
 }
 
 /** Visa primär CTA (betalning/dokument): alla fält OK eller Will markerat insamling klar. */
@@ -78,12 +91,9 @@ export function getIntakeStage(draft: WillDraft): 1 | 2 | 3 {
   if (
     !draft.testatorName?.trim() ||
     !draft.testatorPersonalNumber?.trim() ||
-    !draft.testatorAddress?.trim()
-  ) {
-    return 1;
-  }
-  if (
-    !c.willType ||
+    !draft.testatorAddress?.trim() ||
+    !(c.willForm || c.willType) ||
+    typeof draft.previousWillsExist !== "boolean" ||
     !c.familyStatus ||
     !c.childrenStatus ||
     !c.assets?.length ||
@@ -109,6 +119,60 @@ export function getIntakeStage(draft: WillDraft): 1 | 2 | 3 {
 
 function isWillType(v: unknown): v is Circumstances["willType"] {
   return v === "own" || v === "joint";
+}
+function isWillFormVariant(v: unknown): v is NonNullable<Circumstances["willForm"]> {
+  return v === "individual" || v === "joint_cohabitants" || v === "joint_spouses";
+}
+function coerceInheritanceDistribution(v: unknown): InheritanceDistribution | undefined {
+  if (v === "equal" || v === "least_to_one" || v === "most_to_one") return v;
+  if (typeof v !== "string") return undefined;
+  const t = v.toLowerCase();
+  if (t.includes("likadel") || t === "equal") return "equal";
+  if (t.includes("minst")) return "least_to_one";
+  if (t.includes("mest")) return "most_to_one";
+  return undefined;
+}
+function parseChildEntries(raw: unknown): ChildEntry[] | undefined {
+  if (!Array.isArray(raw)) return undefined;
+  const out: ChildEntry[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) continue;
+    const o = item as Record<string, unknown>;
+    if (typeof o.name !== "string" || !o.name.trim()) continue;
+    out.push({
+      name: o.name.trim(),
+      isSarkullbarn:
+        o.isSarkullbarn === true ||
+        o.isSarkullbarn === "true" ||
+        o.fromPrevious === true ||
+        o.sarkullbarn === true,
+    });
+  }
+  return out.length ? out : undefined;
+}
+function parseBeneficiaries(raw: unknown): NonChildBeneficiary[] | undefined {
+  if (!Array.isArray(raw)) return undefined;
+  const out: NonChildBeneficiary[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) continue;
+    const o = item as Record<string, unknown>;
+    if (o.type !== "person" && o.type !== "organisation") continue;
+    if (typeof o.name !== "string" || !o.name.trim()) continue;
+    let ifp = o.ifPredeceased;
+    if (ifp === "their_heirs") ifp = "their_legal_heirs";
+    if (ifp === "my_heirs") ifp = "my_legal_heirs";
+    if (ifp !== "their_legal_heirs" && ifp !== "my_legal_heirs") continue;
+    out.push({ type: o.type, name: o.name.trim(), ifPredeceased: ifp });
+  }
+  return out.length ? out : undefined;
+}
+function syncWillTypeFromForm(c: Circumstances): Circumstances {
+  const next = { ...c };
+  if (next.willForm === "individual") next.willType = "own";
+  if (next.willForm === "joint_cohabitants" || next.willForm === "joint_spouses") {
+    next.willType = "joint";
+  }
+  return next;
 }
 function isFamilyStatus(v: unknown): v is Circumstances["familyStatus"] {
   return (
@@ -256,6 +320,7 @@ export function mergeWillChatExtraction(
   const c = raw.circumstances;
   if (c && typeof c === "object" && !Array.isArray(c)) {
     const o = c as Record<string, unknown>;
+    if (isWillFormVariant(o.willForm)) next.circumstances.willForm = o.willForm;
     if (isWillType(o.willType)) next.circumstances.willType = o.willType;
     if (isFamilyStatus(o.familyStatus)) next.circumstances.familyStatus = o.familyStatus;
     if (isChildrenStatus(o.childrenStatus)) next.circumstances.childrenStatus = o.childrenStatus;
@@ -263,7 +328,64 @@ export function mergeWillChatExtraction(
       next.circumstances.assets = o.assets;
     }
     if (isOutsideFamily(o.outsideFamily)) next.circumstances.outsideFamily = o.outsideFamily;
+    const nestedChildren = parseChildEntries(o.children);
+    if (nestedChildren) next.children = nestedChildren;
+    const nestedBen = parseBeneficiaries(o.beneficiariesIfNoChildren ?? o.beneficiaries);
+    if (nestedBen) next.beneficiariesIfNoChildren = nestedBen;
+    const idist = coerceInheritanceDistribution(o.inheritanceDistribution);
+    if (idist) next.inheritanceDistribution = idist;
+    if (typeof o.distributionFocusChildName === "string" && o.distributionFocusChildName.trim()) {
+      next.distributionFocusChildName = o.distributionFocusChildName.trim();
+    }
+    if (typeof o.distributionChild === "string" && o.distributionChild.trim()) {
+      next.distributionFocusChildName = o.distributionChild.trim();
+    }
   }
+
+  const topWillForm = raw.willForm;
+  if (isWillFormVariant(topWillForm)) next.circumstances.willForm = topWillForm;
+
+  if (raw.previousWillsExist === true || raw.previousWillsExist === false) {
+    next.previousWillsExist = raw.previousWillsExist;
+  }
+  if (raw.previous_wills === true || raw.previous_wills === false) {
+    next.previousWillsExist = raw.previous_wills;
+  }
+
+  const topChildren = parseChildEntries(raw.children);
+  if (topChildren) next.children = topChildren;
+  const topBen = parseBeneficiaries(raw.beneficiariesIfNoChildren ?? raw.beneficiaries);
+  if (topBen) next.beneficiariesIfNoChildren = topBen;
+
+  const topId = coerceInheritanceDistribution(raw.inheritanceDistribution ?? raw.inheritance_distribution);
+  if (topId) next.inheritanceDistribution = topId;
+  if (typeof raw.distributionFocusChildName === "string" && raw.distributionFocusChildName.trim()) {
+    next.distributionFocusChildName = raw.distributionFocusChildName.trim();
+  }
+  if (typeof raw.distributionChild === "string" && raw.distributionChild.trim()) {
+    next.distributionFocusChildName = raw.distributionChild.trim();
+  }
+
+  if (raw.minorBeneficiaries === true || raw.minorBeneficiaries === false) {
+    next.minorBeneficiaries = raw.minorBeneficiaries;
+  }
+  if (raw.minor_beneficiaries === true || raw.minor_beneficiaries === false) {
+    next.minorBeneficiaries = raw.minor_beneficiaries;
+  }
+  if (raw.specialTrusteeWanted === true || raw.specialTrusteeWanted === false) {
+    next.specialTrusteeWanted = raw.specialTrusteeWanted;
+  }
+  if (raw.special_trustee_wanted === true || raw.special_trustee_wanted === false) {
+    next.specialTrusteeWanted = raw.special_trustee_wanted;
+  }
+  if (typeof raw.specialTrusteeName === "string" && raw.specialTrusteeName.trim()) {
+    next.specialTrusteeName = raw.specialTrusteeName.trim();
+  }
+  if (typeof raw.special_trustee_name === "string" && raw.special_trustee_name.trim()) {
+    next.specialTrusteeName = raw.special_trustee_name.trim();
+  }
+
+  next.circumstances = syncWillTypeFromForm(next.circumstances);
 
   const w = raw.wishes;
   if (w && typeof w === "object" && !Array.isArray(w)) {
@@ -305,6 +427,17 @@ export function mergeWillChatExtraction(
   }
 
   next.funeralWishes = inferFuneralEnumsFromFreeText(next.funeralWishes);
+
+  if (!next.wishes.mainHeir?.trim()) {
+    if (next.children?.length && next.children.every((ch) => ch.name?.trim())) {
+      next.wishes.mainHeir = next.children.map((ch) => ch.name.trim()).join(", ");
+    } else if (next.beneficiariesIfNoChildren?.length) {
+      next.wishes.mainHeir = next.beneficiariesIfNoChildren
+        .map((b) => b.name.trim())
+        .filter(Boolean)
+        .join(", ");
+    }
+  }
 
   if (raw.intakeComplete === true || raw.intakeComplete === "true") {
     next.intakeMarkedComplete = true;

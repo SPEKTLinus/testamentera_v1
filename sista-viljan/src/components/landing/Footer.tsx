@@ -40,7 +40,10 @@ export function Footer() {
 
         <div className="border-t border-[#e5e5e5] pt-8 space-y-3">
           <p className="text-xs text-[#9ca3af] leading-relaxed max-w-3xl">
-            Sista Viljan är ett verktyg för att upprätta testamente. Vi tillhandahåller inte juridisk rådgivning. Vid komplicerade situationer rekommenderar vi kontakt med jurist.
+            Sista Viljan är ett verktyg för att strukturera dina uppgifter och ta fram testamente utifrån det du anger. Vi
+            tillhandahåller inte juridisk rådgivning och ersätter inte en jurist. Vid komplexa eller oklara situationer
+            — till exempel särkullbarn, företag, utlandstillgångar eller tvekan kring laglott — rekommenderar vi att du
+            låter en advokat granska helheten.
           </p>
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
             <p className="text-xs text-[#9ca3af]">

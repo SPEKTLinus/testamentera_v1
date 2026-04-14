@@ -29,6 +29,37 @@ export function buildWillSections(draft: WillDraft): WillSection[] {
     ],
   });
 
+  if (
+    draft.inheritanceDistribution &&
+    draft.inheritanceDistribution !== "equal" &&
+    draft.distributionFocusChildName?.trim()
+  ) {
+    const child = draft.distributionFocusChildName.trim();
+    const isMost = draft.inheritanceDistribution === "most_to_one";
+    sections.push({
+      number: num++,
+      title: "Fördelning mellan bröstarvingar",
+      lines: [
+        isMost
+          ? `Min yttersta vilja är att ${child} ska tilldelas största möjliga andel av kvarlåtenskapen ` +
+            `med iakttagande av att övriga bröstarvingar har rätt till sin laglott enligt 7 kap ärvdabalken.`
+          : `Min yttersta vilja är att ${child} ska tilldelas minst möjliga andel, dock inte mindre än sin laglott ` +
+            `enligt 7 kap ärvdabalken; övriga bröstarvingar ska dela återstoden efter iakttagande av deras laglotter.`,
+      ],
+    });
+  }
+
+  if (draft.specialTrusteeWanted === true && draft.specialTrusteeName?.trim()) {
+    sections.push({
+      number: num++,
+      title: "Särskild förvaltare",
+      lines: [
+        `Jag förordnar ${draft.specialTrusteeName.trim()} som särskild förvaltare av arv som tillfaller ` +
+          `minderårig arvinge, med uppdrag att förvalta arvet till dess arvingen fyllt 18 år.`,
+      ],
+    });
+  }
+
   // 2. Enskild egendom — om valt
   if (w.heirIsPrivateProperty) {
     sections.push({

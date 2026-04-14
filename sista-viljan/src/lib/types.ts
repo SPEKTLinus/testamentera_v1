@@ -1,5 +1,22 @@
 export type WillType = "own" | "joint";
 
+/** Motsvarar "enskilt / gemensamt sambo / gemensamt makar" — synkas med willType (individual→own, övriga→joint). */
+export type WillFormVariant = "individual" | "joint_cohabitants" | "joint_spouses";
+
+export type InheritanceDistribution = "equal" | "least_to_one" | "most_to_one";
+
+export interface ChildEntry {
+  name: string;
+  /** Sant om barnet är från tidigare förhållande (särkullbarn) */
+  isSarkullbarn?: boolean;
+}
+
+export interface NonChildBeneficiary {
+  type: "person" | "organisation";
+  name: string;
+  ifPredeceased: "their_legal_heirs" | "my_legal_heirs";
+}
+
 export type FamilyStatus =
   | "married"
   | "sambo"
@@ -28,6 +45,8 @@ export type OutsideFamily =
 // Step 1: Circumstances
 export interface Circumstances {
   willType?: WillType;
+  /** Om satt: mer precis än bara joint — styr vilka frågor som är relevanta */
+  willForm?: WillFormVariant;
   familyStatus?: FamilyStatus;
   childrenStatus?: ChildrenStatus;
   assets?: Asset[];
@@ -88,6 +107,8 @@ export interface WillDraft {
   aiTokenUsage?: WillAiTokenUsage;
   /** Satt av Will i extraktion (intakeComplete) — UI kan visa gå-vidare-knapp även om validering släpat efter */
   intakeMarkedComplete?: boolean;
+  /** Will-chat: kumulativ input+output (tokens) före köp — styr mjuk sessionsvägledning; uppdateras inte efter betalning */
+  willChatSessionTokens?: number;
   step: number;
   circumstances: Circumstances;
   wishes: Wishes;
@@ -96,6 +117,21 @@ export interface WillDraft {
   testatorPersonalNumber?: string;
   testatorAddress?: string;
   partnerName?: string;
+  /** Finns sedan tidigare upprättade testamenten? (ersätts av det nya) */
+  previousWillsExist?: boolean;
+  /** Namn (och ev. särkullbarn) — när användaren har barn */
+  children?: ChildEntry[];
+  /** När inga barn: en–få testamentstagare */
+  beneficiariesIfNoChildren?: NonChildBeneficiary[];
+  /** Endast när minst två barn: lika / minst till ett / mest till ett */
+  inheritanceDistribution?: InheritanceDistribution;
+  /** Barnets namn när fördelning är least_to_one eller most_to_one */
+  distributionFocusChildName?: string;
+  /** Finns testamentstagare under 18? */
+  minorBeneficiaries?: boolean;
+  /** Om minderåriga: ska särskild förvaltare utses? */
+  specialTrusteeWanted?: boolean;
+  specialTrusteeName?: string;
   /** Tidigare flöde: om personen velat brev (används vid migration till paidLetter) */
   wantsPersonalLetter?: boolean;
   /** Betald tilläggstjänst: personligt brev med egen chatt */

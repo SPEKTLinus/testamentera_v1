@@ -8,6 +8,12 @@ import {
   getWillAiUsage,
 } from "@/lib/aiWillLimits";
 import { assertAnthropicAccess } from "@/lib/assertAnthropicAccess";
+import {
+  buildWillChatSessionGuidanceAppendix,
+  getWillChatSessionHardCap,
+  nextWillChatSessionTotal,
+  willChatSessionHardCapUserMessage,
+} from "@/lib/willChatSessionBudget";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -34,6 +40,8 @@ STIL — SUBSTANS, INTE "SÅ KORT SOM MÖJLIGT"
 - När du introducerar ett nytt ämne eller ett juridiskt begrepp: ge **1–3 meningar** som sätter det i vardaglig kontext innan du frågar. När svaret är enkelt kan du svara lite kortare men fortfarande mänskligt och komplett.
 - Bekräfta gärna kort vad som nu står klart i större drag ("då har vi …") så användaren ser att samtalet bygger något — inte bara en frågelista.
 - Anpassa dig efter vad användaren redan sagt: om de nämner flera saker, bekräfta och plocka ut det som hör till nuvarande ämne.
+- **Smart underlag:** När användaren har värdepapper (aktier/fonder) eller företag bland tillgångarna, ställ **konkreta följdfrågor** som behövs för ett tydligt utkast — t.ex. ungefärlig omfattning, bolag/fondnamn, om de menar hela innehavet eller något särskilt — utan att ge investerings- eller skatteråd. Vid tvekan: säg att en jurist bör granska detaljerna.
+- Du **ersätter inte jurist**. Vid långa allmänna juridiska utläggningar: var kort, ärlig, och led tillbaka till insamling av fakta eller rekommendera jurist för helheten.
 - Förklara aldrig JSON eller tekniska detaljer. Visa inte råa fältnamn.
 
 MARKDOWN (synlig text till användaren)
@@ -47,12 +55,33 @@ JURIDISK TYDLIGHET — ARV, SÄRBOENDE OCH "DELNING"
 - Inled gärna med tidslinje: "När du har gått bort och [namn] har fått arvet …" innan du beskriver framtida scenarier.
 - Om du märker att du uttryckt dig otydligt: rätta kort och tydligt utan att överösa medursäkter.
 
+BESLUTSTRÄD (dynamiskt — fråga ALDRIG om något som redan finns i utkastet; hoppa över grenar som inte hör till personens situation)
+A) **Testamentesform:** circumstances.willForm (sätts tillsammans med willType):
+   - "individual" = testamente för en person → willType "own"
+   - "joint_cohabitants" = gemensamt för sambor → willType "joint"
+   - "joint_spouses" = gemensamt för makar → willType "joint"
+B) **Tidigare testamenten:** previousWillsExist boolean. Om ja: förklara kort i chatten att detta testamente ersätter tidigare i sin helhet (ingen juridisk rådgivning).
+C) **Barn:** circumstances.childrenStatus som idag. Om barn finns: samla **children** som array { "name": "...", "isSarkullbarn": true/false } för varje barn du kan identifiera. Fråga inte "vilket barn" om bara ett barn. Vid flera barn: förtydliga särkullbarn om relevant.
+D) **Inga barn:** beneficiariesIfNoChildren: [ { "type": "person"|"organisation", "name": "...", "ifPredeceased": "their_legal_heirs"|"my_legal_heirs" } ] (en till några). Förklara vad som händer om testamentstagaren avlider före testatorn.
+E) **Minst två barn:** inheritanceDistribution: "equal" | "least_to_one" | "most_to_one". Om "least_to_one" eller "most_to_one": distributionFocusChildName = aktuellt barns namn. Förklara **laglott** i enkel svenska (minst = barnet begränsas till laglott; mest = barnet får så mycket som möjligt inom laglottsreglerna).
+F) **Enskild egendom:** wishes.heirIsPrivateProperty — samma sak som konkurrentens val; förklara innan ja/nej.
+G) **Minderåriga arvingar:** minorBeneficiaries boolean. Om ja: förklara förmyndare vs särskild förvaltare; specialTrusteeWanted boolean; om true → specialTrusteeName.
+H) **Begravning + övrigt** som tidigare (tillgångar, outsideFamily, executor, charity, funeralWishes).
+
+Om användaren föreslår något som strider mot **laglott** eller är omöjligt: förklara kort och erbjud närmaste lagliga alternativ (t.ex. "minst möjligt" i stället för att utestå ett barn helt).
+
 DATABAS (exakta enum-värden — använd dessa i JSON)
-circumstances.willType: "own" | "joint"
+circumstances.willForm: "individual" | "joint_cohabitants" | "joint_spouses" (ange alltid tillsammans med rätt willType enligt A)
+circumstances.willType: "own" | "joint" (måste stämma med willForm)
 circumstances.familyStatus: "married" | "sambo" | "single" | "divorced" | "widowed"
 circumstances.childrenStatus: "none" | "joint" | "from_previous" | "both"
 circumstances.assets: array av "residence" | "vacation_home" | "business" | "securities" | "none" (välj alla som passar; "none" ensamt om inget av det andra stämmer)
 circumstances.outsideFamily: "person" | "charity" | "none"
+children: array av { "name": string, "isSarkullbarn": boolean } (endast när barn finns)
+beneficiariesIfNoChildren: array när childrenStatus "none"
+inheritanceDistribution / distributionFocusChildName: när minst två barn
+previousWillsExist: boolean
+minorBeneficiaries, specialTrusteeWanted, specialTrusteeName: enligt grenarna ovan
 
 wishes.heirIsPrivateProperty: boolean (om huvudarvtagaren ska få som enskild egendom)
 wishes.partnerCanStay: boolean — bara relevant om användaren är gift/sambo OCH har särkullbarn eller både gemensamma och tidigare barn. Fråga annars inte.
@@ -69,8 +98,8 @@ Personnummer ska normaliseras till formatet YYYYMMDD-XXXX när du sparar i JSON.
 
 Ordning att fylla i (hoppa över det som redan finns i "Nuvarande utkast"):
 1) testatorName, testatorPersonalNumber, testatorAddress
-2) circumstances (alla fält)
-3) wishes: mainHeir, heirIsPrivateProperty, specificItems (valfritt), partnerCanStay om relevant, charity om relevant, executor
+2) willForm, previousWillsExist, circumstances (inkl. barngren / testamentstagare / fördelning / minderåriga enligt beslutsträdet)
+3) wishes: mainHeir (kan härledas från children eller beneficiaries), heirIsPrivateProperty, specificItems (valfritt), partnerCanStay om relevant, charity om relevant, executor
 4) funeralWishes: burialForm, ceremony, sedan övriga valfria (music, clothing, flowersOrCharity, charityName, speakers, location, personalMessage)
 
 EXTRAHERING
@@ -150,7 +179,15 @@ export async function POST(req: NextRequest) {
         testatorName: draft.testatorName,
         testatorPersonalNumber: draft.testatorPersonalNumber,
         testatorAddress: draft.testatorAddress,
+        previousWillsExist: draft.previousWillsExist,
         circumstances: draft.circumstances,
+        children: draft.children,
+        beneficiariesIfNoChildren: draft.beneficiariesIfNoChildren,
+        inheritanceDistribution: draft.inheritanceDistribution,
+        distributionFocusChildName: draft.distributionFocusChildName,
+        minorBeneficiaries: draft.minorBeneficiaries,
+        specialTrusteeWanted: draft.specialTrusteeWanted,
+        specialTrusteeName: draft.specialTrusteeName,
         wishes: draft.wishes,
         funeralWishes: draft.funeralWishes,
       },
@@ -158,7 +195,22 @@ export async function POST(req: NextRequest) {
       2
     )}`;
 
-    const system = `${WILL_CHAT_SYSTEM}\n\n${contextBlock}`;
+    const unpaid = !draft.paid;
+    const sessionBefore = draft.willChatSessionTokens ?? 0;
+    const sessionGuidance = buildWillChatSessionGuidanceAppendix(sessionBefore, unpaid);
+    const hardCap = getWillChatSessionHardCap();
+
+    if (unpaid && sessionBefore >= hardCap) {
+      return NextResponse.json({
+        text: willChatSessionHardCapUserMessage(),
+        extractedData: null,
+        aiTokenUsage: getWillAiUsage(draft),
+        willChatSessionTokens: sessionBefore,
+        sessionCapReached: true,
+      });
+    }
+
+    const system = `${WILL_CHAT_SYSTEM}\n\n${contextBlock}${sessionGuidance}`;
 
     const maxTokens = capOutputBudget(draft, 2048);
     if (maxTokens <= 0) {
@@ -193,6 +245,7 @@ export async function POST(req: NextRequest) {
       );
     }
     const newUsage = usageCheck.aiTokenUsage;
+    const willChatSessionTokens = nextWillChatSessionTotal(draft, inTok, outTok);
 
     const content = response.content[0];
     if (content.type !== "text") {
@@ -205,6 +258,7 @@ export async function POST(req: NextRequest) {
       text: display,
       extractedData: data,
       aiTokenUsage: newUsage,
+      willChatSessionTokens,
     });
   } catch (error: unknown) {
     console.error("will-chat error:", error);

@@ -68,6 +68,34 @@ function buildUserPrompt(draft: WillDraft): string {
 
   if (familyStatus) lines.push(`Civilstånd: ${familyStatus}`);
   if (childrenStatus) lines.push(`Barn: ${childrenStatus}`);
+  if (draft.circumstances.willForm) lines.push(`Testamentesform (verktyg): ${draft.circumstances.willForm}`);
+  if (typeof draft.previousWillsExist === "boolean") {
+    lines.push(`Tidigare testamenten: ${draft.previousWillsExist ? "ja" : "nej"}`);
+  }
+  if (draft.children?.length) {
+    lines.push(
+      `Barn (namn): ${draft.children.map((ch) => `${ch.name}${ch.isSarkullbarn ? " (särkullbarn)" : ""}`).join("; ")}`
+    );
+  }
+  if (draft.beneficiariesIfNoChildren?.length) {
+    lines.push(
+      `Testamentstagare utan barn: ${draft.beneficiariesIfNoChildren
+        .map((b) => `${b.type} ${b.name} — om avliden: ${b.ifPredeceased}`)
+        .join(" | ")}`
+    );
+  }
+  if (draft.inheritanceDistribution) {
+    lines.push(`Arvsfördelning mellan barn: ${draft.inheritanceDistribution}`);
+  }
+  if (draft.distributionFocusChildName) {
+    lines.push(`Barn som avses vid ojämn fördelning: ${draft.distributionFocusChildName}`);
+  }
+  if (typeof draft.minorBeneficiaries === "boolean") {
+    lines.push(`Minderårig arvinge: ${draft.minorBeneficiaries ? "ja" : "nej"}`);
+  }
+  if (draft.specialTrusteeWanted === true && draft.specialTrusteeName) {
+    lines.push(`Särskild förvaltare: ${draft.specialTrusteeName}`);
+  }
   if (w.mainHeir) lines.push(`Arvinge: ${w.mainHeir}`);
   if (w.heirIsPrivateProperty !== undefined) lines.push(`Enskild egendom: ${w.heirIsPrivateProperty ? "ja" : "nej"}`);
   if (w.partnerCanStay !== undefined) lines.push(`Partner ska kunna bo kvar: ${w.partnerCanStay ? "ja" : "nej"}`);

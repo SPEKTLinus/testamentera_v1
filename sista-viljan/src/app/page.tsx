@@ -1,4 +1,5 @@
 import { Nav } from "@/components/landing/Nav";
+import { LegalDisclaimerBanner } from "@/components/landing/LegalDisclaimerBanner";
 import { Hero } from "@/components/landing/Hero";
 import { HowItWorks } from "@/components/landing/HowItWorks";
 import { SocialProof } from "@/components/landing/SocialProof";
@@ -12,6 +13,7 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-white">
       <Nav />
+      <LegalDisclaimerBanner />
       <main>
         <Hero />
         <HowItWorks />
