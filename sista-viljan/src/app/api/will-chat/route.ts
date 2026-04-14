@@ -14,6 +14,7 @@ import {
   nextWillChatSessionTotal,
   willChatSessionHardCapUserMessage,
 } from "@/lib/willChatSessionBudget";
+import { clipWillChatUiMessages } from "@/lib/willChatMessages";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -106,6 +107,7 @@ Efter varje användarsvar: lägg ALLTID till ett block sist i svaret (användare
 { "testatorName": "...", "circumstances": { ... }, "wishes": { ... }, "funeralWishes": { ... } }
 </extracted_data>
 Inkludera ENDAST fält du faktiskt kan fylla i från senaste svaret (partiell uppdatering). Använd exakta enum-strängar för alla kodade fält (bl.a. funeralWishes.burialForm och funeralWishes.ceremony — aldrig svenska ord där).
+**Begravning / ceremoni:** Om användaren nämner musik, låtar, artister, tal, talare, blommor, välgörenhet, plats eller liknande — spara det **alltid** i lämpligt fält under funeralWishes (music, speakers, flowersOrCharity, charityName, location, personalMessage m.m.), även om tonen är lättsam eller skämtsam. Verkliga önskemål och skämt kan samexistera: få med användarens ord i fritextfälten så inget "glöms" i underlaget.
 Om inget nytt går att utläsa: <extracted_data>{}</extracted_data>
 
 När ALLT enligt listan är komplett i utkastet (efter din tolkning av senaste svaret), sätt i JSON: "intakeComplete": true (booleansk) tillsammans med sista fälten.
@@ -172,26 +174,35 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: budget.message, code: "TOKEN_LIMIT" }, { status: 429 });
     }
 
-    const contextBlock = `Nuvarande utkast (JSON — använd detta för att se vad som redan är ifyllt och vad som saknas):\n${JSON.stringify(
-      {
-        testatorName: draft.testatorName,
-        testatorPersonalNumber: draft.testatorPersonalNumber,
-        testatorAddress: draft.testatorAddress,
-        previousWillsExist: draft.previousWillsExist,
-        circumstances: draft.circumstances,
-        children: draft.children,
-        beneficiariesIfNoChildren: draft.beneficiariesIfNoChildren,
-        inheritanceDistribution: draft.inheritanceDistribution,
-        distributionFocusChildName: draft.distributionFocusChildName,
-        minorBeneficiaries: draft.minorBeneficiaries,
-        specialTrusteeWanted: draft.specialTrusteeWanted,
-        specialTrusteeName: draft.specialTrusteeName,
-        wishes: draft.wishes,
-        funeralWishes: draft.funeralWishes,
-      },
+    const contextPayload = {
+      testatorName: draft.testatorName,
+      testatorPersonalNumber: draft.testatorPersonalNumber,
+      testatorAddress: draft.testatorAddress,
+      previousWillsExist: draft.previousWillsExist,
+      circumstances: draft.circumstances,
+      children: draft.children,
+      beneficiariesIfNoChildren: draft.beneficiariesIfNoChildren,
+      inheritanceDistribution: draft.inheritanceDistribution,
+      distributionFocusChildName: draft.distributionFocusChildName,
+      minorBeneficiaries: draft.minorBeneficiaries,
+      specialTrusteeWanted: draft.specialTrusteeWanted,
+      specialTrusteeName: draft.specialTrusteeName,
+      wishes: draft.wishes,
+      funeralWishes: draft.funeralWishes,
+      intakeMarkedComplete: draft.intakeMarkedComplete,
+      intakeCompleteHint: draft.intakeMarkedComplete === true ? "Användaren har markerat insamling klar." : undefined,
+    };
+
+    const { clipped: clippedUi, didClip } = clipWillChatUiMessages(uiMessages);
+
+    let contextBlock = `Nuvarande utkast (JSON — använd detta för att se vad som redan är ifyllt och vad som saknas; det är sanningen om underlaget, inte chatthistoriken):\n${JSON.stringify(
+      contextPayload,
       null,
       2
     )}`;
+    if (didClip) {
+      contextBlock += `\n\n(Internt: äldre chattmeddelanden skickas inte med i detta anrop för att spara utrymme — all redan registrerad fakta ska finnas i JSON ovan. Förlita dig på utkastet; fokusera på senaste användarsvaren i tråden.)`;
+    }
 
     const unpaid = !draft.paid;
     const sessionBefore = draft.willChatSessionTokens ?? 0;
@@ -225,7 +236,7 @@ export async function POST(req: NextRequest) {
       model: "claude-sonnet-4-20250514",
       max_tokens: maxTokens,
       system,
-      messages: toAnthropicMessages(uiMessages) as Anthropic.MessageCreateParams["messages"],
+      messages: toAnthropicMessages(clippedUi) as Anthropic.MessageCreateParams["messages"],
     });
 
     const inTok = response.usage?.input_tokens ?? 0;

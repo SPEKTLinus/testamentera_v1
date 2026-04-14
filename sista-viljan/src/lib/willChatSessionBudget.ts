@@ -108,13 +108,17 @@ Börja **korta** svaren något. Om användaren fördjupar sig i ren juridisk teo
   return "";
 }
 
-/** Fast, vänlig text om vi inte anropar AI längre (extrem längd). */
+/** Fast, vänlig text om vi inte anropar AI längre (obetald sessionsgräns nådd). */
 export function willChatSessionHardCapUserMessage(): string {
   return [
-    "Vi har gått igenom väldigt mycket tillsammans — det märks att du tar detta på allvar.",
+    "Du har nått **maxlängden** för det kostnadsfria testamentssamtalet (teknisk gräns innan köp).",
     "",
-    "Den här tjänsten är till för att **samla in dina val** och hjälpa dig få dem i ordning till ett testamente, inte för långa löpande juridiska samtal. För sådana frågor rekommenderar vi att du bokar en jurist som kan se helheten — till exempel via https://www.advokatsamfundet.se/hitta-advokat",
+    "Det betyder **inte** att du skrev något fel — bara att varje obetald session har ett tak så att vi kan hålla tjänsten hållbar.",
     "",
-    "Det du redan fyllt i finns kvar. **Gå vidare** med knappen nedan när du vill betala och få dina dokument, eller skriv ett sista kort meddelande om något konkret saknas i underlaget.",
+    "Allt som redan sparats i ditt underlag (synligt i utkastet) finns kvar. Om ditt **senaste svar** inte hann registreras: skriv en **kort** radigen efter du gått vidare och betalat, eller komplettera på dokumentsteget.",
+    "",
+    "Vid **långa juridiska** frågor som kräver helhetsbedömning kan en jurist vara rätt — se https://www.advokatsamfundet.se/hitta-advokat",
+    "",
+    "Använd **Gå vidare** nedan när du vill betala och få dina dokument.",
   ].join("\n");
 }
