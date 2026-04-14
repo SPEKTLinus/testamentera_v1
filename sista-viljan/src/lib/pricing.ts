@@ -24,4 +24,11 @@ export function letterChatTurnsRemaining(draft: WillDraft): number {
  */
 export const REMINDER_RECURRING_INTERVAL_MONTHS = 12;
 
+/**
+ * Varje såld testamentebetalning (Swish) fyller på den globala poolen med så här många
+ * "första starter" för nya mobilnummer — så att obetalda prospekt inte kan öppna obegränsat
+ * många chattflöden utan att någon konverterar.
+ */
+export const WILL_FREE_SLOTS_PER_WILL_PURCHASE = 25;
+
 export type PaymentProductKey = keyof typeof PAYMENT_PRICES;

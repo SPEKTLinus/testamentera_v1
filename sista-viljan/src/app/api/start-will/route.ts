@@ -115,6 +115,16 @@ export async function POST(req: NextRequest) {
 
     const row = data as { ok?: boolean; error?: string; max?: number } | null;
     if (!row?.ok) {
+      if (row?.error === "pool_empty") {
+        return NextResponse.json(
+          {
+            ok: false,
+            error:
+              "Vi kan tyvärr inte starta fler nya testamentsamtal just nu — kapaciteten för obetalda starter är tillfälligt full. Varje köpt testamente öppnar för fler nya samtal; försök igen senare eller kontakta oss så hjälper vi dig.",
+          },
+          { status: 503 }
+        );
+      }
       const max = typeof row?.max === "number" ? row.max : limit;
       return NextResponse.json(
         {

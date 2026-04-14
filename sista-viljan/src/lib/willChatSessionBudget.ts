@@ -1,19 +1,26 @@
 /**
- * Will-chat före köp: begränsar långa "gratisrådgivnings"-sessioner utan att låsa med tekniska felmeddelanden.
- * Efter betalning räknas inte sessionen upp (samma utkast kan fortsätta utan den här styrningen).
+ * Will-chat före köp: begränsar långa sessioner (Anthropic input+output tokens) utan tekniska fel.
+ * Efter betalning räknas inte sessionen upp.
+ *
+ * OBS: Gränsen följer API-tokens (faktisk kostnad), inte Unicode-"tecken" i chatten.
  */
 
-const DEFAULT_BUDGET = 20_000;
+const DEFAULT_MAX_SESSION_TOKENS = 105_000;
 const DEFAULT_SOFT_FRACTION = 0.85;
-const DEFAULT_HARD_MULTIPLIER = 3;
+const DEFAULT_STRONG_GUIDANCE_FRACTION = 0.95;
 
-export function getWillChatSessionTokenBudget(): number {
-  const raw = process.env.WILL_CHAT_SESSION_TOKEN_BUDGET?.trim();
+export function getWillChatSessionMaxTokens(): number {
+  const raw = process.env.WILL_CHAT_SESSION_MAX_TOKENS?.trim();
   if (raw) {
     const n = parseInt(raw, 10);
     if (Number.isFinite(n) && n >= 1000) return n;
   }
-  return DEFAULT_BUDGET;
+  const legacy = process.env.WILL_CHAT_SESSION_TOKEN_BUDGET?.trim();
+  if (legacy) {
+    const n = parseInt(legacy, 10);
+    if (Number.isFinite(n) && n >= 1000) return n;
+  }
+  return DEFAULT_MAX_SESSION_TOKENS;
 }
 
 function getSoftFraction(): number {
@@ -25,14 +32,31 @@ function getSoftFraction(): number {
   return DEFAULT_SOFT_FRACTION;
 }
 
-export function getWillChatSessionHardCap(): number {
-  const raw = process.env.WILL_CHAT_SESSION_HARD_CAP_MULTIPLIER?.trim();
-  let mult = DEFAULT_HARD_MULTIPLIER;
+function getStrongGuidanceFraction(): number {
+  const raw = process.env.WILL_CHAT_SESSION_STRONG_GUIDANCE_FRACTION?.trim();
   if (raw) {
     const n = parseFloat(raw);
-    if (Number.isFinite(n) && n >= 1.5) mult = n;
+    if (Number.isFinite(n) && n > getSoftFraction() && n <= 1) return n;
   }
-  return Math.round(getWillChatSessionTokenBudget() * mult);
+  return DEFAULT_STRONG_GUIDANCE_FRACTION;
+}
+
+/** Hård stopp: ingen ny AI-tur när kumulativ session når detta (obetalt utkast). */
+export function getWillChatSessionHardCap(): number {
+  return getWillChatSessionMaxTokens();
+}
+
+export function getWillChatSessionSoftThreshold(): number {
+  return Math.floor(getWillChatSessionMaxTokens() * getSoftFraction());
+}
+
+export function getWillChatSessionStrongGuidanceThreshold(): number {
+  return Math.floor(getWillChatSessionMaxTokens() * getStrongGuidanceFraction());
+}
+
+/** @deprecated Använd getWillChatSessionStrongGuidanceThreshold; finns för bakåtkompabilitet. */
+export function getWillChatSessionTokenBudget(): number {
+  return getWillChatSessionStrongGuidanceThreshold();
 }
 
 /** Summan input+output tokens i will-chat för obetalt utkast (uppdateras server-side). */
@@ -55,15 +79,15 @@ export function buildWillChatSessionGuidanceAppendix(
 ): string {
   if (!unpaid) return "";
 
-  const budget = getWillChatSessionTokenBudget();
-  const soft = Math.floor(budget * getSoftFraction());
-  const hard = getWillChatSessionHardCap();
+  const max = getWillChatSessionMaxTokens();
+  const soft = getWillChatSessionSoftThreshold();
+  const strong = getWillChatSessionStrongGuidanceThreshold();
 
-  if (sessionTokensBeforeTurn >= hard) {
+  if (sessionTokensBeforeTurn >= max) {
     return "";
   }
 
-  if (sessionTokensBeforeTurn >= budget) {
+  if (sessionTokensBeforeTurn >= strong) {
     return `
 
 SESSION — LÄNGD INNAN KÖP (internt, visa aldrig fältnamn eller "tokens" för användaren)

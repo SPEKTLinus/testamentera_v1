@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PAYMENT_PRICES } from "@/lib/pricing";
 import { cleanPhoneDigits, isValidSwedishMobile } from "@/lib/phone";
+import type { PaymentProduct } from "@/lib/types";
+import { encodeSwishPayeeReference } from "@/lib/swishPayeeReference";
 
 // Swish Handel API integration
 // Docs: https://developer.swish.nu/api/swish-for-merchants/v2
@@ -23,7 +25,12 @@ export async function POST(req: NextRequest) {
   try {
     const { phoneNumber, product, draftId } = await req.json();
 
-    const amount = PRICES[product];
+    if (product !== "will" && product !== "letter") {
+      return NextResponse.json({ error: "Okänd produkt" }, { status: 400 });
+    }
+    const paymentProduct = product as PaymentProduct;
+
+    const amount = PRICES[paymentProduct];
     if (!amount) {
       return NextResponse.json({ error: "Okänd produkt" }, { status: 400 });
     }
@@ -55,13 +62,17 @@ export async function POST(req: NextRequest) {
     const callbackUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/swish/callback`;
 
     const body = {
-      payeePaymentReference: draftId || paymentId.slice(0, 35),
+      payeePaymentReference: encodeSwishPayeeReference(
+        paymentProduct,
+        typeof draftId === "string" ? draftId : undefined,
+        paymentId
+      ),
       callbackUrl,
       payeeAlias: merchantNumber,
       currency: "SEK",
       payerAlias: swishNumber,
       amount: amount.toString(),
-      message: productLabel(product),
+      message: productLabel(paymentProduct),
     };
 
     // In production, this request must use mutual TLS with the Swish certificate.
@@ -90,7 +101,7 @@ export async function POST(req: NextRequest) {
   }
 }
 
-function productLabel(product: string): string {
+function productLabel(product: PaymentProduct): string {
   switch (product) {
     case "will":
       return "Sista Viljan - Testamente";
