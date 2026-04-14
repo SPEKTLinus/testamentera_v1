@@ -38,7 +38,8 @@ const CHECKLIST = [
   {
     id: "witnesses_sign",
     text: "Vittnena skriver under efter dig",
-    detail: "De bekräftar att du undertecknat av fri vilja. De behöver inte läsa testamentet.",
+    detail:
+      "De bekräftar att du undertecknat av fri vilja. De behöver inte läsa testamentet. Be dem fylla i namnförtydligande och personnummer enligt blanketten — det underlättar att visa vem som skrev under om det behövs senare.",
   },
   {
     id: "store",
@@ -73,6 +74,17 @@ export function Step4Signing({ elapsedMinutes, draft, onOpenLetterFlow, onBackTo
         <p className="text-[#4a5568] text-base leading-relaxed max-w-lg">
           Ditt testamente är juridiskt giltigt när du undertecknat det i närvaro av två vittnen. Inget annat krävs.
         </p>
+        <div className="mt-6 max-w-lg border border-[#e5e5e5] bg-[#f9fafb] p-4">
+          <p className="text-xs font-semibold text-ink mb-1.5">Personnummer på pappersoriginalet</p>
+          <p className="text-xs text-[#4a5568] leading-relaxed">
+            Vi rekommenderar att du och vittnena tydligt skriver <strong>personnummer</strong> där blanketten ber om
+            namnförtydligande. Det gör det enklare att knyta underskrifterna till rätt person om någon behöver styrka
+            vem som var med — ett vanligt sätt att dokumentera signeringskedjan.{" "}
+            <strong className="font-medium text-ink">Sista Viljan lagrar inte personnummer i våra system;</strong> det som
+            står på det fysiska originalet är ert eget underlag och förvaras hos er (eller där ni väljer att förvara
+            testamentet).
+          </p>
+        </div>
       </div>
 
       <div className="space-y-0 divide-y divide-[#e5e5e5] mb-10">

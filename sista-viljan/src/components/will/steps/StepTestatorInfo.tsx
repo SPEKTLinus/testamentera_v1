@@ -5,18 +5,17 @@ import { useVoiceInput } from "@/hooks/useVoiceInput";
 import { VoiceButton } from "../VoiceButton";
 
 interface Props {
-  initial: { name?: string; personalNumber?: string; address?: string };
-  onComplete: (data: { name: string; personalNumber: string; address: string }) => void;
+  initial: { name?: string; address?: string };
+  onComplete: (data: { name: string; address: string }) => void;
 }
 
-type Q = "name" | "personalNumber" | "address";
-const QUESTIONS: Q[] = ["name", "personalNumber", "address"];
+type Q = "name" | "address";
+const QUESTIONS: Q[] = ["name", "address"];
 
 export function StepTestatorInfo({ initial, onComplete }: Props) {
   const [currentQ, setCurrentQ] = useState<Q>("name");
   const [values, setValues] = useState({
     name: initial.name || "",
-    personalNumber: initial.personalNumber || "",
     address: initial.address || "",
   });
 
@@ -27,7 +26,6 @@ export function StepTestatorInfo({ initial, onComplete }: Props) {
     if (nextIndex >= QUESTIONS.length) {
       onComplete({
         name: values.name.trim(),
-        personalNumber: values.personalNumber.trim(),
         address: values.address.trim(),
       });
     } else {
@@ -40,12 +38,6 @@ export function StepTestatorInfo({ initial, onComplete }: Props) {
       question: "Vad heter du?",
       hint: "Ditt fullständiga namn som det står i passet eller på ID-handlingen.",
       placeholder: "Förnamn Efternamn",
-    },
-    personalNumber: {
-      question: "Vad är ditt personnummer?",
-      hint: "Format: YYYYMMDD-XXXX — krävs för att testamentet ska vara juridiskt bindande.",
-      placeholder: "19800101-1234",
-      pattern: "^\\d{8}-\\d{4}$",
     },
     address: {
       question: "Var bor du?",

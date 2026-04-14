@@ -13,8 +13,6 @@ import {
   needsInheritanceDistributionQuestion,
 } from "./intakeDecisionTree";
 
-const LEGACY_PN = /^\d{8}-\d{4}$/;
-
 /** Migration: tidigare ingick brev i samma köp om wantsPersonalLetter var true. */
 export function migrateWillDraft(draft: WillDraft): WillDraft {
   let next: WillDraft = { ...draft };
@@ -24,8 +22,6 @@ export function migrateWillDraft(draft: WillDraft): WillDraft {
 
   const legacyShapeComplete =
     !!next.testatorName?.trim() &&
-    !!next.testatorPersonalNumber?.trim() &&
-    LEGACY_PN.test(next.testatorPersonalNumber.trim()) &&
     !!next.testatorAddress?.trim() &&
     !!next.circumstances.willType &&
     !next.circumstances.willForm &&
@@ -90,7 +86,6 @@ export function getIntakeStage(draft: WillDraft): 1 | 2 | 3 {
   const c = draft.circumstances;
   if (
     !draft.testatorName?.trim() ||
-    !draft.testatorPersonalNumber?.trim() ||
     !draft.testatorAddress?.trim() ||
     !(c.willForm || c.willType) ||
     typeof draft.previousWillsExist !== "boolean" ||

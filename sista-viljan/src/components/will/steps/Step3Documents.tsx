@@ -442,10 +442,13 @@ function WillHtmlPreview({ draft }: { draft: WillDraft }) {
 
       <p className="mb-6 text-[0.85rem]">
         Jag,{" "}
-        <strong>{draft.testatorName || <span className="text-amber-600">[Namn]</span>}</strong> personnummer{" "}
-        <strong>
-          {draft.testatorPersonalNumber || <span className="text-amber-600">[personnummer]</span>}
-        </strong>
+        <strong>{draft.testatorName || <span className="text-amber-600">[Namn]</span>}</strong>
+        {draft.testatorPersonalNumber?.trim() ? (
+          <>
+            {" "}
+            personnummer <strong>{draft.testatorPersonalNumber.trim()}</strong>
+          </>
+        ) : null}
         , bosatt på{" "}
         <strong>{draft.testatorAddress || <span className="text-amber-600">[adress]</span>}</strong>, förordnar härmed
         följande:

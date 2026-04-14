@@ -152,10 +152,14 @@ export function LegalWillDocument({ draft }: { draft: WillDraft }) {
           <Text style={{ fontFamily: "Helvetica-Bold" }}>
             {draft.testatorName || "[Namn]"}
           </Text>
-          {` personnummer `}
-          <Text style={{ fontFamily: "Helvetica-Bold" }}>
-            {draft.testatorPersonalNumber || "[personnummer]"}
-          </Text>
+          {draft.testatorPersonalNumber?.trim() ? (
+            <>
+              {` personnummer `}
+              <Text style={{ fontFamily: "Helvetica-Bold" }}>
+                {draft.testatorPersonalNumber.trim()}
+              </Text>
+            </>
+          ) : null}
           {`, bosatt på `}
           <Text style={{ fontFamily: "Helvetica-Bold" }}>
             {draft.testatorAddress || "[adress]"}

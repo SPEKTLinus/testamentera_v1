@@ -94,10 +94,8 @@ funeralWishes.ceremony: "religious" | "civil" | "own"
  — own vid tydligt personlig/egen ceremoni utan kyrklig eller borgerlig ordning
 Vid fraser som "traditionell begravning i kyrkan": sätt minst ceremony till "religious"; burialForm oftast "burial" om det handlar om kista/jordbegravning (inte kremering).
 
-Personnummer ska normaliseras till formatet YYYYMMDD-XXXX när du sparar i JSON.
-
 Ordning att fylla i (hoppa över det som redan finns i "Nuvarande utkast"):
-1) testatorName, testatorPersonalNumber, testatorAddress
+1) testatorName, testatorAddress — **fråga inte** efter personnummer; om användaren själv nämner det får du spara testatorPersonalNumber i YYYYMMDD-XXXX-format
 2) willForm, previousWillsExist, circumstances (inkl. barngren / testamentstagare / fördelning / minderåriga enligt beslutsträdet)
 3) wishes: mainHeir (kan härledas från children eller beneficiaries), heirIsPrivateProperty, specificItems (valfritt), partnerCanStay om relevant, charity om relevant, executor
 4) funeralWishes: burialForm, ceremony, sedan övriga valfria (music, clothing, flowersOrCharity, charityName, speakers, location, personalMessage)

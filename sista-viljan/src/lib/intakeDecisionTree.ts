@@ -1,7 +1,5 @@
 import type { WillDraft } from "./types";
 
-const PN_REGEX = /^\d{8}-\d{4}$/;
-
 /** Minst två barn → kräv fördelningsval (likadelning / minst / mest). */
 export function needsInheritanceDistributionQuestion(d: WillDraft): boolean {
   const n = d.children?.length ?? 0;
@@ -68,9 +66,6 @@ export function collectIntakeGaps(d: WillDraft): string[] {
   const c = d.circumstances;
 
   if (!d.testatorName?.trim()) gaps.push("Ditt namn");
-  if (!d.testatorPersonalNumber?.trim() || !PN_REGEX.test(d.testatorPersonalNumber.trim())) {
-    gaps.push("Personnummer (ååååmmdd-xxxx)");
-  }
   if (!d.testatorAddress?.trim()) gaps.push("Adress");
 
   if (!willFormOrTypeSatisfied(d)) gaps.push("Testamentesform (enskilt eller gemensamt)");
