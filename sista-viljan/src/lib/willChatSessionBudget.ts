@@ -5,7 +5,7 @@
  * OBS: Gränsen följer API-tokens (faktisk kostnad), inte Unicode-"tecken" i chatten.
  */
 
-const DEFAULT_MAX_SESSION_TOKENS = 105_000;
+const DEFAULT_MAX_SESSION_TOKENS = 100_000;
 const DEFAULT_SOFT_FRACTION = 0.85;
 const DEFAULT_STRONG_GUIDANCE_FRACTION = 0.95;
 

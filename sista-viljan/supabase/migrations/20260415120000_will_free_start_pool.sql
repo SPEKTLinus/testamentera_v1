@@ -1,4 +1,4 @@
--- Global pool: varje såld testamentebetalning fyller på (standard +25 via app).
+-- Global pool: varje såld testamentebetalning fyller på (antal via app, standard +20).
 -- Första "start testamente" per nytt mobilnummer drar 1 från poolen; återkommande samma nummer drar inte.
 
 CREATE TABLE IF NOT EXISTS public.will_free_start_pool (

@@ -29,6 +29,6 @@ export const REMINDER_RECURRING_INTERVAL_MONTHS = 12;
  * "första starter" för nya mobilnummer — så att obetalda prospekt inte kan öppna obegränsat
  * många chattflöden utan att någon konverterar.
  */
-export const WILL_FREE_SLOTS_PER_WILL_PURCHASE = 25;
+export const WILL_FREE_SLOTS_PER_WILL_PURCHASE = 20;
 
 export type PaymentProductKey = keyof typeof PAYMENT_PRICES;
